@@ -9,27 +9,77 @@ import os
 import sys
 from pathlib import Path
 import fitz  # PyMuPDF
+import re
+
+
+def _sanitize_heading(text: str) -> str:
+    text = text.strip()
+    # Collapse whitespace
+    text = re.sub(r"\s+", " ", text)
+    # Trim overly long headings
+    return text[:160]
+
+
+def _to_fitz_y(page, camelot_y: float) -> float:
+    """Convert Camelot (PDF) y to fitz y using page height."""
+    return float(page.rect.height) - float(camelot_y)
+
+
+def _find_heading_above(page, bbox, band_px: int = 120) -> str | None:
+    """Find the closest text block within a vertical band just above the table top.
+    - bbox: Camelot bbox (x_left, y_bottom, x_right, y_top) in PDF coords
+    - band_px: search height in pixels/points above table top
+    Returns heading text or None.
+    """
+    try:
+        x_left, y_bottom, x_right, y_top = bbox
+    except Exception:
+        return None
+    table_top_fitz = _to_fitz_y(page, y_top)
+    blocks = page.get_text("blocks") or []
+    candidates = []
+    for b in blocks:
+        x0, y0, x1, y1, text, *_ = b
+        if not text or not text.strip():
+            continue
+        # Consider blocks with bottom y1 just above table_top within band
+        if y1 <= table_top_fitz and (table_top_fitz - y1) <= band_px:
+            s = text.strip()
+            # Heuristics: short-ish, not mostly digits/symbols
+            if 2 <= len(s) <= 140:
+                # digit ratio
+                digits = sum(c.isdigit() for c in s)
+                letters = sum(c.isalpha() for c in s)
+                if letters == 0 and digits > 0:
+                    continue
+                if digits / max(1, len(s)) > 0.4:
+                    continue
+                # Prefer blocks horizontally overlapping table width somewhat
+                horiz_overlap = max(0, min(x1, x_right) - min(x1, x_right) - max(0, (min(x1, x_right) - max(x0, x_left))))
+                # Simple score by proximity (smaller distance better)
+                distance = table_top_fitz - y1
+                candidates.append((distance, s))
+    if not candidates:
+        return None
+    # Choose by smallest vertical distance
+    candidates.sort(key=lambda t: t[0])
+    return _sanitize_heading(candidates[0][1])
 
 
 def extract_tables_from_pdf(pdf_path, pages='all'):
     """
-    Extract tables from a PDF file using Camelot.
-    
-    Parameters:
-    pdf_path (str): Path to the PDF file
-    pages (str or list): Pages to extract from ('all' or list of page numbers)
-    flavor (str): Extraction method ('lattice' or 'stream')
-    
-    Returns:
-    dict: Dictionary mapping headings to merged pandas DataFrames
+    Extract tables from a PDF file using Camelot, detect headings just above,
+    and merge tables without headings into the last heading group.
+
+    Returns dict: heading -> merged DataFrame
     """
     try:
         # Check if PDF file exists
         if not os.path.exists(pdf_path):
             raise FileNotFoundError(f"PDF file not found: {pdf_path}")
-        
+
         print(f"Extracting tables from: {pdf_path}")
-        
+
         # Extract tables using Camelot (lattice only)
         tables = camelot.read_pdf(
             pdf_path,
@@ -40,73 +90,61 @@ def extract_tables_from_pdf(pdf_path, pages='all'):
             shift_text=['l', 't'],
             strip_text='\n'
         )
-        
+
         if len(tables) == 0:
             print("No tables found in the PDF.")
             return {}
-        
+
         print(f"Found {len(tables)} table(s)")
-        # Step 1: Extract headings/non-table text using fitz
+
+        # Open the PDF with fitz
         doc = fitz.open(pdf_path)
-        headings = []
-        for page_num in range(len(doc)):
-            page = doc[page_num]
-            blocks = page.get_text("blocks")
-            for b in blocks:
-                x0, y0, x1, y1, text, block_no, block_type = b[:7]
-                # Heuristic: consider text blocks with larger font size or bold as headings
-                # But fitz does not provide font info in blocks, so use position and length
-                if text.strip() and len(text.strip()) < 100 and y1 < page.rect.height * 0.5:
-                    headings.append({
-                        "text": text.strip(),
-                        "page": page_num + 1,
-                        "y1": y1
-                    })
-        # Step 2: Associate tables with nearest heading above
-        table_info = []
-        for i, table in enumerate(tables):
-            df = table.df
-            if len(df) == 0:
-                continue
-            page = int(table.page)
-            # Get table bbox (top y)
-            bbox = table._bbox
-            table_top = bbox[1] if bbox else None
-            # Find nearest heading above
-            heading_text = None
-            candidates = [h for h in headings if h["page"] == page and (table_top is None or h["y1"] < table_top)]
-            if candidates:
-                # Pick the heading with largest y1 below table_top
-                heading_text = max(candidates, key=lambda h: h["y1"])["text"]
-            else:
-                # If no heading above, use previous page's last heading
-                prev_candidates = [h for h in headings if h["page"] < page]
-                if prev_candidates:
-                    heading_text = prev_candidates[-1]["text"]
-            if not heading_text:
-                heading_text = f"No Heading (Table {i+1})"
-            table_info.append({
-                "heading": heading_text,
-                "df": df
+
+        # Build sortable metadata for each table
+        meta = []
+        for t in tables:
+            try:
+                page_idx = int(t.page) - 1
+            except Exception:
+                page_idx = 0
+            page = doc[page_idx]
+            x_left, y_bottom, x_right, y_top = t._bbox
+            top_fitz = _to_fitz_y(page, y_top)
+            meta.append({
+                "table": t,
+                "page_idx": page_idx,
+                "page": page,
+                "bbox": (x_left, y_bottom, x_right, y_top),
+                "top_fitz": top_fitz,
             })
-        # Step 3: Merge tables under the same heading
-        merged_tables = {}
-        for info in table_info:
-            heading = info["heading"]
-            df = info["df"]
-            if heading in merged_tables:
-                # Merge with previous table under same heading
-                merged_tables[heading] = pd.concat([merged_tables[heading], df], ignore_index=True)
+        # Process sequentially: page ascending, then visual top-to-bottom
+        meta.sort(key=lambda m: (m["page_idx"], m["top_fitz"]))
+        merged: dict[str, pd.DataFrame] = {}
+        last_heading: str | None = None
+        for i, m in enumerate(meta, start=1):
+            tbl = m["table"]
+            df = tbl.df
+            if df is None or len(df) == 0:
+                continue
+            heading = _find_heading_above(m["page"], m["bbox"], band_px=140)
+            if heading:
+                last_heading = heading
+                if heading in merged:
+                    merged[heading] = pd.concat([merged[heading], df], ignore_index=True)
+                else:
+                    merged[heading] = df
+                print(f"Assigned Table {i} to heading: {heading}")
             else:
-                merged_tables[heading] = df
-        # Print merged tables
-        for heading, df in merged_tables.items():
-            print(f"\nHeading: {heading}")
-            print(f"Rows: {len(df)}, Columns: {len(df.columns)}")
-            print("=" * 50)
-            print(df.to_string(index=False))
-            print("=" * 50)
-        return merged_tables
+                target = last_heading or "Unlabeled"
+                if target in merged:
+                    merged[target] = pd.concat([merged[target], df], ignore_index=True)
+                else:
+                    merged[target] = df
+                print(f"No heading found for Table {i}; merged into: {target}")
+        # Optional: print summaries
+        for h, d in merged.items():
+            print(f"\nHeading: {h} -> Rows: {len(d)}, Cols: {len(d.columns)}")
+        return merged
     except Exception as e:
         print(f"Error extracting tables: {str(e)}")
         return {}
@@ -114,27 +152,20 @@ def extract_tables_from_pdf(pdf_path, pages='all'):
 
 def save_tables_to_csv(merged_tables, output_dir="output", pdf_name="extracted_tables"):
     """
-    Save merged tables to CSV files.
-    
-    Parameters:
-    merged_tables (dict): Dictionary mapping headings to DataFrames
-    output_dir (str): Directory to save CSV files
-    pdf_name (str): Base name for output files
+    Save merged tables to CSV files. Filenames are heading-based.
     """
     if not merged_tables:
         print("No tables to save.")
         return
     Path(output_dir).mkdir(exist_ok=True)
-    import re
-    for i, (heading, df) in enumerate(merged_tables.items()):
-        # Remove newlines and replace non-alphanumeric (except space/underscore) with underscore
-        safe_heading = heading.replace("/", "_").replace("\\", "_").replace(":", "_").replace("|", "_")
-        safe_heading = safe_heading.replace("\n", "_").replace("\r", "_")
-        safe_heading = re.sub(r'[^\w\s]', '_', safe_heading)  # keep alphanumeric, underscore, space
-        safe_heading = re.sub(r'\s+', '_', safe_heading)  # replace spaces with underscore
-        filename = f"{output_dir}/{pdf_name}_{safe_heading}_table_{i+1}.csv"
+    for heading, df in merged_tables.items():
+        safe = heading.replace('/', '_').replace('\\', '_').replace(':', '_').replace('|', '_')
+        safe = safe.replace('\n', ' ').replace('\r', ' ')
+        safe = re.sub(r"[^\w\s-]", "_", safe)
+        safe = re.sub(r"\s+", "_", safe).strip('_')
+        filename = f"{output_dir}/{safe}.csv"
         df.to_csv(filename, index=False)
-        print(f"Saved table under heading '{heading}' to: {filename}")
+        print(f"Saved: {filename}")
 
 
 def main():
@@ -143,22 +174,21 @@ def main():
     """
     print("PDF Table Extractor using Camelot")
     print("=" * 40)
-    
+
     # Example usage - you can modify this path
     pdf_path = "iit_delhi_data.pdf"
-    
+
     if not pdf_path:
-        print("No PDF path provided. Using example...")
-        print("Please place a PDF file in the current directory and run the script again.")
+        print("No PDF path provided.")
         return
-    
-    # Try different extraction methods
+
+    # Extract tables and save them to CSV
     print("\nExtracting tables using lattice method...")
-    merged_tables = extract_tables_from_pdf(pdf_path)
-    if not merged_tables:
+    merged = extract_tables_from_pdf(pdf_path)
+    if not merged:
         print("No tables could be extracted with lattice method.")
         return
-    save_tables_to_csv(merged_tables, pdf_name=Path(pdf_path).stem)
+    save_tables_to_csv(merged, pdf_name=Path(pdf_path).stem)
 
 
 if __name__ == "__main__":
