@@ -1,0 +1,50 @@
+0,1,2,3,4,5,6,7,8,9,10
+Srno,Name,Age,Designation,Gender,Qualification,"Experience (In
+Months)","Currently working
+with institution?",Joining Date,Leaving Date,Association type
+1,Amitabh Jaipuria,58,Other,Male,PGDBM,330,Yes,28-06-2013,--,Visiting
+2,Anuja Agarwal,54,Other,Female,Ph.D,60,Yes,25-07-2023,--,Visiting
+3,Arti D Kalro,41,Professor,Female,Ph.D,174,Yes,24-11-2010,--,Regular
+4,Arvind Sharma,68,Other,Male,PGDM,276,Yes,25-09-2017,--,Visiting
+5,Ashish Pandey,48,Professor,Male,Ph.D,282,Yes,22-09-2009,--,Regular
+6,Ashish Singh,45,Associate Professor,Male,Ph.D,168,Yes,09-12-2013,--,Regular
+7,Atanu Rakshit,71,Other,Male,Ph.D,480,Yes,04-07-2019,--,Visiting
+8,Atul Kanyalkar,58,Other,Male,Ph.D,448,Yes,09-08-2021,--,Adhoc / Contractual
+9,Dinesh Sharma,55,Associate Professor,Male,Ph.D,354,Yes,21-01-2008,--,Regular
+10,Gajendra Kumar Adil,61,Professor,Male,Ph.D,342,Yes,29-06-2000,--,Regular
+11,Gaurav Raizada,42,Other,Male,Ph.D,96,Yes,21-12-2022,--,Visiting
+12,Indrajit Mukherjee,51,Professor,Male,Ph.D,234,Yes,10-07-2008,--,Regular
+13,Isaac Jacob,71,Other,Male,M.A.(Economics),443,Yes,14-09-2012,--,Visiting
+14,Karuna Jain,64,Professor,Female,Ph.D,498,Yes,08-12-1986,--,Regular
+15,"Kirankumar S
+Momaya",59,Professor,Male,Ph.D,342,Yes,10-12-2009,--,Regular
+16,Leena Jha,56,Other,Female,Ph.D,420,Yes,28-06-2013,--,Visiting
+17,Mayank Pareek,63,Other,Male,Ph.D,492,Yes,03-05-2021,--,Adhoc / Contractual
+18,MD Agrawal,70,Other,Male,M.Sc.,500,Yes,24-12-2013,--,Visiting
+19,Neeraj Pandey,49,Other,Male,Ph.D,236,Yes,27-12-2012,--,Visiting
+20,Pankaj Dutta,47,Professor,Male,Ph.D,210,Yes,23-06-2008,--,Regular
+21,Piyush Pandey,37,Assistant Professor,Male,Ph.D,108,Yes,25-03-2019,--,Regular
+22,Rahul J Patil,50,Associate Professor,Male,Ph.D,246,Yes,12-05-2008,--,Regular
+23,Rajendra M Sonar,55,Professor,Male,Ph.D,294,Yes,27-05-2003,--,Regular
+24,Rajib Ranjan Borah,42,Other,Male,PGDM,201,Yes,21-12-2022,--,Visiting
+25,Rajkumar Hirwani,67,Other,Male,Ph.D,500,Yes,21-11-2008,--,Visiting
+26,Ravishankar Iyer,61,Other,Male,M.S,490,Yes,21-12-2021,--,Adhoc / Contractual
+27,"Rohan
+Chinchwadkar",36,Assistant Professor,Male,Ph.D,162,Yes,30-04-2019,--,Regular
+28,Sanjay Pareek,51,Other,Male,Ph.D,220,Yes,30-12-2022,--,Visiting
+29,Sapar Narayan Rao,62,Professor,Male,Ph.D,378,Yes,02-11-1998,--,Regular
+30,Sarthak Gaurav,39,Assistant Professor,Male,Ph.D,138,Yes,13-09-2015,--,Regular
+31,"Shivganesh
+Bhargava",65,Professor,Male,Ph.D,474,Yes,04-03-1991,--,Regular
+32,Snehal Awate,42,Assistant Professor,Female,Ph.D,162,Yes,09-01-2020,--,Regular
+33,"Sonti Venkata Durga
+Nageswara Rao",58,Professor,Male,Ph.D,342,Yes,01-08-1997,--,Regular
+34,Soumya Rajan,39,Assistant Professor,Female,Ph.D,162,Yes,10-07-2024,--,Regular
+35,Sudeep Bapat,34,Assistant Professor,Male,Ph.D,51,Yes,08-01-2024,--,Regular
+36,Suhrid Brahma,53,Other,Male,MBA,325,Yes,27-06-2018,--,Visiting
+37,T T Niranjan,50,Associate Professor,Male,Ph.D,234,Yes,01-12-2011,--,Regular
+38,Trupti Mishra,48,Associate Professor,Female,Ph.D,234,Yes,11-01-2008,--,Regular
+39,Usha Ananthakumar,56,Professor,Female,Ph.D,318,Yes,20-03-2001,--,Regular
+40,Varadraj B Bapat,52,Professor,Male,Ph.D,270,Yes,08-07-2008,--,Regular
+41,"Vinish Kumar
+Kathuria",57,Professor,Male,Ph.D,258,Yes,27-08-2007,--,Regular
