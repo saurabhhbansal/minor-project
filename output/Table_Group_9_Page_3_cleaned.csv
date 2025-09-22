@@ -1,0 +1,32 @@
+Here's the unpivoted data in the requested two-column format:
+
+| Description                      | Value |
+|----------------------------------|-------|
+| Calendar year - 2023             | 2023  |
+| Calendar year - 2022             | 2022  |
+| Calendar year - 2021             | 2021  |
+| No. of Patents Published - 2023  | 180   |
+| No. of Patents Published - 2022  | 228   |
+| No. of Patents Published - 2021  | 142   |
+| No. of Patents Granted - 2023    | 370   |
+| No. of Patents Granted - 2022    | 30    |
+| No. of Patents Granted - 2021    | 116   |
+
+**Explanation of the process:**
+
+1.  **Identify Headers and Row Names:**
+    *   The first row `0,1,2,3` appears to be column indices, which are not useful for creating descriptive labels in this context.
+    *   The second row `Calendar year,2023,2022,2021` contains the header for the year columns.
+    *   The subsequent rows contain the data and the descriptive row names (e.g., "No. of Patents Published").
+
+2.  **Iterate and Combine:**
+    *   For each data point in the CSV (excluding the initial index row):
+        *   Take the row name (e.g., "No. of Patents Published").
+        *   Take the corresponding year header from the second row.
+        *   Combine them with a hyphen to form the 'Description' (e.g., "No. of Patents Published - 2023").
+        *   Take the actual data value from the cell as the 'Value'.
+
+3.  **Exclude Empty/Null:**
+    *   In this specific input, there were no empty or null values that needed exclusion. If there were, those rows/columns would simply be skipped.
+
+This process effectively "unpivots" the data by transforming it from a wide format (headers across columns) to a long format (one description and its corresponding value per row).

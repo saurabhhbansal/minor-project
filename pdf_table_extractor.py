@@ -10,6 +10,9 @@ import os
 import re
 import fitz
 from pathlib import Path
+import time
+from google.api_core import exceptions
+import google.generativeai as genai
 
 # --- Helper Functions ---
 
@@ -175,11 +178,62 @@ def save_tables_to_csv(merged_tables, output_dir="output"):
         df.to_csv(filename, index=False)
         print(f"Saved: {filename}")
 
+def call_gemini_api(csv_content: str, api_key: str) -> str | None:
+    """Calls the Gemini API to clean the CSV content."""
+    try:
+        genai.configure(api_key=api_key)
+        model = genai.GenerativeModel('gemini-2.5-flash-lite') # Using the latest available flash model
+        prompt = f"Unpivot this CSV into a two-column format. The first column should be 'Description', and the second should be 'Value'. Combine all relevant headers and row names to create a descriptive label in the 'Description' column. Exclude any empty or null values.\n\n{csv_content}"
+        response = model.generate_content(prompt)
+        return response.text
+    except Exception as e:
+        print(f"Error calling Gemini API: {e}")
+        return None
+
+def process_csvs_with_gemini(api_key: str, output_dir="output"):
+    """Processes all CSV files in the output directory with the Gemini API."""
+    print("\nStarting Gemini CSV processing...")
+    if not api_key:
+        print("API key is missing. Skipping Gemini processing.")
+        return
+
+    csv_files = [f for f in os.listdir(output_dir) if f.endswith(".csv") and "cleaned" not in f]
+    for i, filename in enumerate(csv_files):
+        csv_path = os.path.join(output_dir, filename)
+        print(f"Processing {csv_path}...")
+        
+        with open(csv_path, 'r', encoding='utf-8') as f:
+            csv_data = f.read()
+        
+        cleaned_csv = call_gemini_api(csv_data, api_key)
+        
+        if cleaned_csv:
+            base, ext = os.path.splitext(filename)
+            new_filename = f"{base}_cleaned{ext}"
+            new_filepath = os.path.join(output_dir, new_filename)
+            
+            # Clean up the response from Gemini
+            # It sometimes adds backticks for code blocks
+            cleaned_csv = cleaned_csv.strip().strip("`").strip()
+            if cleaned_csv.lower().startswith('csv'):
+                cleaned_csv = cleaned_csv[3:].lstrip()
+
+
+            with open(new_filepath, 'w', encoding='utf-8') as f:
+                f.write(cleaned_csv)
+            print(f"Saved cleaned file: {new_filepath}")
+
+        if i < len(csv_files) - 1:
+            print("Waiting 2 seconds before next request...")
+            time.sleep(2) # Wait for 2 seconds to respect 30 RPM limit
+
 def main(debug=False):
     pdf_path = "NIRF_IITBombay_2025_Overall_Category.pdf"
     if not os.path.exists(pdf_path):
         print(f"Error: PDF file not found at '{pdf_path}'. Please make sure the file is in the same directory.")
         return
+
+    api_key = input("Please enter your Gemini API key: ").strip()
     
     print("\nStarting table extraction and grouping...")
     merged = extract_and_group_tables(pdf_path, debug=debug)
@@ -188,6 +242,7 @@ def main(debug=False):
         print("No tables could be extracted or merged.")
     else:
         save_tables_to_csv(merged)
+        process_csvs_with_gemini(api_key)
 
 if __name__ == "__main__":
     main(debug=True)  # Enable debug mode

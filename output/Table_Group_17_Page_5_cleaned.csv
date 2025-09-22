@@ -1,0 +1,370 @@
+Description,Value
+Srno - Name,1 - Amitabh Jaipuria
+Srno - Age,1 - 58
+Srno - Designation,1 - Other
+Srno - Gender,1 - Male
+Srno - Qualification,1 - PGDBM
+Srno - Experience (In Months),1 - 330
+Srno - Currently working with institution?,1 - Yes
+Srno - Joining Date,1 - 28-06-2013
+Srno - Association type,1 - Visiting
+Srno - Name,2 - Anuja Agarwal
+Srno - Age,2 - 54
+Srno - Designation,2 - Other
+Srno - Gender,2 - Female
+Srno - Qualification,2 - Ph.D
+Srno - Experience (In Months),2 - 60
+Srno - Currently working with institution?,2 - Yes
+Srno - Joining Date,2 - 25-07-2023
+Srno - Association type,2 - Visiting
+Srno - Name,3 - Arti D Kalro
+Srno - Age,3 - 41
+Srno - Designation,3 - Professor
+Srno - Gender,3 - Female
+Srno - Qualification,3 - Ph.D
+Srno - Experience (In Months),3 - 174
+Srno - Currently working with institution?,3 - Yes
+Srno - Joining Date,3 - 24-11-2010
+Srno - Association type,3 - Regular
+Srno - Name,4 - Arvind Sharma
+Srno - Age,4 - 68
+Srno - Designation,4 - Other
+Srno - Gender,4 - Male
+Srno - Qualification,4 - PGDM
+Srno - Experience (In Months),4 - 276
+Srno - Currently working with institution?,4 - Yes
+Srno - Joining Date,4 - 25-09-2017
+Srno - Association type,4 - Visiting
+Srno - Name,5 - Ashish Pandey
+Srno - Age,5 - 48
+Srno - Designation,5 - Professor
+Srno - Gender,5 - Male
+Srno - Qualification,5 - Ph.D
+Srno - Experience (In Months),5 - 282
+Srno - Currently working with institution?,5 - Yes
+Srno - Joining Date,5 - 22-09-2009
+Srno - Association type,5 - Regular
+Srno - Name,6 - Ashish Singh
+Srno - Age,6 - 45
+Srno - Designation,6 - Associate Professor
+Srno - Gender,6 - Male
+Srno - Qualification,6 - Ph.D
+Srno - Experience (In Months),6 - 168
+Srno - Currently working with institution?,6 - Yes
+Srno - Joining Date,6 - 09-12-2013
+Srno - Association type,6 - Regular
+Srno - Name,7 - Atanu Rakshit
+Srno - Age,7 - 71
+Srno - Designation,7 - Other
+Srno - Gender,7 - Male
+Srno - Qualification,7 - Ph.D
+Srno - Experience (In Months),7 - 480
+Srno - Currently working with institution?,7 - Yes
+Srno - Joining Date,7 - 04-07-2019
+Srno - Association type,7 - Visiting
+Srno - Name,8 - Atul Kanyalkar
+Srno - Age,8 - 58
+Srno - Designation,8 - Other
+Srno - Gender,8 - Male
+Srno - Qualification,8 - Ph.D
+Srno - Experience (In Months),8 - 448
+Srno - Currently working with institution?,8 - Yes
+Srno - Joining Date,8 - 09-08-2021
+Srno - Association type,8 - Adhoc / Contractual
+Srno - Name,9 - Dinesh Sharma
+Srno - Age,9 - 55
+Srno - Designation,9 - Associate Professor
+Srno - Gender,9 - Male
+Srno - Qualification,9 - Ph.D
+Srno - Experience (In Months),9 - 354
+Srno - Currently working with institution?,9 - Yes
+Srno - Joining Date,9 - 21-01-2008
+Srno - Association type,9 - Regular
+Srno - Name,10 - Gajendra Kumar Adil
+Srno - Age,10 - 61
+Srno - Designation,10 - Professor
+Srno - Gender,10 - Male
+Srno - Qualification,10 - Ph.D
+Srno - Experience (In Months),10 - 342
+Srno - Currently working with institution?,10 - Yes
+Srno - Joining Date,10 - 29-06-2000
+Srno - Association type,10 - Regular
+Srno - Name,11 - Gaurav Raizada
+Srno - Age,11 - 42
+Srno - Designation,11 - Other
+Srno - Gender,11 - Male
+Srno - Qualification,11 - Ph.D
+Srno - Experience (In Months),11 - 96
+Srno - Currently working with institution?,11 - Yes
+Srno - Joining Date,11 - 21-12-2022
+Srno - Association type,11 - Visiting
+Srno - Name,12 - Indrajit Mukherjee
+Srno - Age,12 - 51
+Srno - Designation,12 - Professor
+Srno - Gender,12 - Male
+Srno - Qualification,12 - Ph.D
+Srno - Experience (In Months),12 - 234
+Srno - Currently working with institution?,12 - Yes
+Srno - Joining Date,12 - 10-07-2008
+Srno - Association type,12 - Regular
+Srno - Name,13 - Isaac Jacob
+Srno - Age,13 - 71
+Srno - Designation,13 - Other
+Srno - Gender,13 - Male
+Srno - Qualification,13 - M.A.(Economics)
+Srno - Experience (In Months),13 - 443
+Srno - Currently working with institution?,13 - Yes
+Srno - Joining Date,13 - 14-09-2012
+Srno - Association type,13 - Visiting
+Srno - Name,14 - Karuna Jain
+Srno - Age,14 - 64
+Srno - Designation,14 - Professor
+Srno - Gender,14 - Female
+Srno - Qualification,14 - Ph.D
+Srno - Experience (In Months),14 - 498
+Srno - Currently working with institution?,14 - Yes
+Srno - Joining Date,14 - 08-12-1986
+Srno - Association type,14 - Regular
+Srno - Name,15 - Kirankumar S Momaya
+Srno - Age,15 - 59
+Srno - Designation,15 - Professor
+Srno - Gender,15 - Male
+Srno - Qualification,15 - Ph.D
+Srno - Experience (In Months),15 - 342
+Srno - Currently working with institution?,15 - Yes
+Srno - Joining Date,15 - 10-12-2009
+Srno - Association type,15 - Regular
+Srno - Name,16 - Leena Jha
+Srno - Age,16 - 56
+Srno - Designation,16 - Other
+Srno - Gender,16 - Female
+Srno - Qualification,16 - Ph.D
+Srno - Experience (In Months),16 - 420
+Srno - Currently working with institution?,16 - Yes
+Srno - Joining Date,16 - 28-06-2013
+Srno - Association type,16 - Visiting
+Srno - Name,17 - Mayank Pareek
+Srno - Age,17 - 63
+Srno - Designation,17 - Other
+Srno - Gender,17 - Male
+Srno - Qualification,17 - Ph.D
+Srno - Experience (In Months),17 - 492
+Srno - Currently working with institution?,17 - Yes
+Srno - Joining Date,17 - 03-05-2021
+Srno - Association type,17 - Adhoc / Contractual
+Srno - Name,18 - MD Agrawal
+Srno - Age,18 - 70
+Srno - Designation,18 - Other
+Srno - Gender,18 - Male
+Srno - Qualification,18 - M.Sc.
+Srno - Experience (In Months),18 - 500
+Srno - Currently working with institution?,18 - Yes
+Srno - Joining Date,18 - 24-12-2013
+Srno - Association type,18 - Visiting
+Srno - Name,19 - Neeraj Pandey
+Srno - Age,19 - 49
+Srno - Designation,19 - Other
+Srno - Gender,19 - Male
+Srno - Qualification,19 - Ph.D
+Srno - Experience (In Months),19 - 236
+Srno - Currently working with institution?,19 - Yes
+Srno - Joining Date,19 - 27-12-2012
+Srno - Association type,19 - Visiting
+Srno - Name,20 - Pankaj Dutta
+Srno - Age,20 - 47
+Srno - Designation,20 - Professor
+Srno - Gender,20 - Male
+Srno - Qualification,20 - Ph.D
+Srno - Experience (In Months),20 - 210
+Srno - Currently working with institution?,20 - Yes
+Srno - Joining Date,20 - 23-06-2008
+Srno - Association type,20 - Regular
+Srno - Name,21 - Piyush Pandey
+Srno - Age,21 - 37
+Srno - Designation,21 - Assistant Professor
+Srno - Gender,21 - Male
+Srno - Qualification,21 - Ph.D
+Srno - Experience (In Months),21 - 108
+Srno - Currently working with institution?,21 - Yes
+Srno - Joining Date,21 - 25-03-2019
+Srno - Association type,21 - Regular
+Srno - Name,22 - Rahul J Patil
+Srno - Age,22 - 50
+Srno - Designation,22 - Associate Professor
+Srno - Gender,22 - Male
+Srno - Qualification,22 - Ph.D
+Srno - Experience (In Months),22 - 246
+Srno - Currently working with institution?,22 - Yes
+Srno - Joining Date,22 - 12-05-2008
+Srno - Association type,22 - Regular
+Srno - Name,23 - Rajendra M Sonar
+Srno - Age,23 - 55
+Srno - Designation,23 - Professor
+Srno - Gender,23 - Male
+Srno - Qualification,23 - Ph.D
+Srno - Experience (In Months),23 - 294
+Srno - Currently working with institution?,23 - Yes
+Srno - Joining Date,23 - 27-05-2003
+Srno - Association type,23 - Regular
+Srno - Name,24 - Rajib Ranjan Borah
+Srno - Age,24 - 42
+Srno - Designation,24 - Other
+Srno - Gender,24 - Male
+Srno - Qualification,24 - PGDM
+Srno - Experience (In Months),24 - 201
+Srno - Currently working with institution?,24 - Yes
+Srno - Joining Date,24 - 21-12-2022
+Srno - Association type,24 - Visiting
+Srno - Name,25 - Rajkumar Hirwani
+Srno - Age,25 - 67
+Srno - Designation,25 - Other
+Srno - Gender,25 - Male
+Srno - Qualification,25 - Ph.D
+Srno - Experience (In Months),25 - 500
+Srno - Currently working with institution?,25 - Yes
+Srno - Joining Date,25 - 21-11-2008
+Srno - Association type,25 - Visiting
+Srno - Name,26 - Ravishankar Iyer
+Srno - Age,26 - 61
+Srno - Designation,26 - Other
+Srno - Gender,26 - Male
+Srno - Qualification,26 - M.S
+Srno - Experience (In Months),26 - 490
+Srno - Currently working with institution?,26 - Yes
+Srno - Joining Date,26 - 21-12-2021
+Srno - Association type,26 - Adhoc / Contractual
+Srno - Name,27 - Rohan Chinchwadkar
+Srno - Age,27 - 36
+Srno - Designation,27 - Assistant Professor
+Srno - Gender,27 - Male
+Srno - Qualification,27 - Ph.D
+Srno - Experience (In Months),27 - 162
+Srno - Currently working with institution?,27 - Yes
+Srno - Joining Date,27 - 30-04-2019
+Srno - Association type,27 - Regular
+Srno - Name,28 - Sanjay Pareek
+Srno - Age,28 - 51
+Srno - Designation,28 - Other
+Srno - Gender,28 - Male
+Srno - Qualification,28 - Ph.D
+Srno - Experience (In Months),28 - 220
+Srno - Currently working with institution?,28 - Yes
+Srno - Joining Date,28 - 30-12-2022
+Srno - Association type,28 - Visiting
+Srno - Name,29 - Sapar Narayan Rao
+Srno - Age,29 - 62
+Srno - Designation,29 - Professor
+Srno - Gender,29 - Male
+Srno - Qualification,29 - Ph.D
+Srno - Experience (In Months),29 - 378
+Srno - Currently working with institution?,29 - Yes
+Srno - Joining Date,29 - 02-11-1998
+Srno - Association type,29 - Regular
+Srno - Name,30 - Sarthak Gaurav
+Srno - Age,30 - 39
+Srno - Designation,30 - Assistant Professor
+Srno - Gender,30 - Male
+Srno - Qualification,30 - Ph.D
+Srno - Experience (In Months),30 - 138
+Srno - Currently working with institution?,30 - Yes
+Srno - Joining Date,30 - 13-09-2015
+Srno - Association type,30 - Regular
+Srno - Name,31 - Shivganesh Bhargava
+Srno - Age,31 - 65
+Srno - Designation,31 - Professor
+Srno - Gender,31 - Male
+Srno - Qualification,31 - Ph.D
+Srno - Experience (In Months),31 - 474
+Srno - Currently working with institution?,31 - Yes
+Srno - Joining Date,31 - 04-03-1991
+Srno - Association type,31 - Regular
+Srno - Name,32 - Snehal Awate
+Srno - Age,32 - 42
+Srno - Designation,32 - Assistant Professor
+Srno - Gender,32 - Female
+Srno - Qualification,32 - Ph.D
+Srno - Experience (In Months),32 - 162
+Srno - Currently working with institution?,32 - Yes
+Srno - Joining Date,32 - 09-01-2020
+Srno - Association type,32 - Regular
+Srno - Name,33 - Sonti Venkata Durga Nageswara Rao
+Srno - Age,33 - 58
+Srno - Designation,33 - Professor
+Srno - Gender,33 - Male
+Srno - Qualification,33 - Ph.D
+Srno - Experience (In Months),33 - 342
+Srno - Currently working with institution?,33 - Yes
+Srno - Joining Date,33 - 01-08-1997
+Srno - Association type,33 - Regular
+Srno - Name,34 - Soumya Rajan
+Srno - Age,34 - 39
+Srno - Designation,34 - Assistant Professor
+Srno - Gender,34 - Female
+Srno - Qualification,34 - Ph.D
+Srno - Experience (In Months),34 - 162
+Srno - Currently working with institution?,34 - Yes
+Srno - Joining Date,34 - 10-07-2024
+Srno - Association type,34 - Regular
+Srno - Name,35 - Sudeep Bapat
+Srno - Age,35 - 34
+Srno - Designation,35 - Assistant Professor
+Srno - Gender,35 - Male
+Srno - Qualification,35 - Ph.D
+Srno - Experience (In Months),35 - 51
+Srno - Currently working with institution?,35 - Yes
+Srno - Joining Date,35 - 08-01-2024
+Srno - Association type,35 - Regular
+Srno - Name,36 - Suhrid Brahma
+Srno - Age,36 - 53
+Srno - Designation,36 - Other
+Srno - Gender,36 - Male
+Srno - Qualification,36 - MBA
+Srno - Experience (In Months),36 - 325
+Srno - Currently working with institution?,36 - Yes
+Srno - Joining Date,36 - 27-06-2018
+Srno - Association type,36 - Visiting
+Srno - Name,37 - T T Niranjan
+Srno - Age,37 - 50
+Srno - Designation,37 - Associate Professor
+Srno - Gender,37 - Male
+Srno - Qualification,37 - Ph.D
+Srno - Experience (In Months),37 - 234
+Srno - Currently working with institution?,37 - Yes
+Srno - Joining Date,37 - 01-12-2011
+Srno - Association type,37 - Regular
+Srno - Name,38 - Trupti Mishra
+Srno - Age,38 - 48
+Srno - Designation,38 - Associate Professor
+Srno - Gender,38 - Female
+Srno - Qualification,38 - Ph.D
+Srno - Experience (In Months),38 - 234
+Srno - Currently working with institution?,38 - Yes
+Srno - Joining Date,38 - 11-01-2008
+Srno - Association type,38 - Regular
+Srno - Name,39 - Usha Ananthakumar
+Srno - Age,39 - 56
+Srno - Designation,39 - Professor
+Srno - Gender,39 - Female
+Srno - Qualification,39 - Ph.D
+Srno - Experience (In Months),39 - 318
+Srno - Currently working with institution?,39 - Yes
+Srno - Joining Date,39 - 20-03-2001
+Srno - Association type,39 - Regular
+Srno - Name,40 - Varadraj B Bapat
+Srno - Age,40 - 52
+Srno - Designation,40 - Professor
+Srno - Gender,40 - Male
+Srno - Qualification,40 - Ph.D
+Srno - Experience (In Months),40 - 270
+Srno - Currently working with institution?,40 - Yes
+Srno - Joining Date,40 - 08-07-2008
+Srno - Association type,40 - Regular
+Srno - Name,41 - Vinish Kumar Kathuria
+Srno - Age,41 - 57
+Srno - Designation,41 - Professor
+Srno - Gender,41 - Male
+Srno - Qualification,41 - Ph.D
+Srno - Experience (In Months),41 - 258
+Srno - Currently working with institution?,41 - Yes
+Srno - Joining Date,41 - 27-08-2007
+Srno - Association type,41 - Regular

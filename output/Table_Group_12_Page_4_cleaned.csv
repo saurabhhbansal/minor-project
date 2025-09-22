@@ -1,0 +1,92 @@
+python
+import pandas as pd
+import io
+
+csv_data = """0,1,2,3
+Financial Year,2023-24,2022-23,2021-22
+"Total no. of Executive Development Programs/ Management
+Development Programs",8,8,18
+Total no. of Participants,309,211,1090
+"Total Annual Earnings (Amount in Rupees)(Excluding Lodging
+& Boarding Charges)",185367156,194638053,199299376
+Total Annual Earnings in Words,"Eighteen crores fifty three lakh sixty seven thousand  one
+hundred fifty six only","Nineteen Crores Forty Six Lakhs Thirty Eight Thousand Fifty
+Three Only","Nineteen Crores Ninety Two Lakhs Ninety Nine Thousand
+Three Hundred Seventy Six Only"
+"""
+
+df = pd.read_csv(io.StringIO(csv_data), header=0)
+
+# Set the first column as index
+df = df.set_index(df.columns[0])
+
+# Transpose the DataFrame
+df_transposed = df.T
+
+# Reset index to make the 'Financial Year' a column
+df_transposed = df_transposed.reset_index()
+df_transposed = df_transposed.rename(columns={'index': 'Financial Year'})
+
+# Melt the DataFrame to unpivot it
+df_melted = df_transposed.melt(id_vars='Financial Year', var_name='Original Header', value_name='Value')
+
+# Create the 'Description' column by combining relevant information
+# We need to handle potential multi-line strings in the original headers
+df_melted['Description'] = df_melted.apply(lambda row: f"{row['Original Header']} ({row['Financial Year']})"
+                                         .replace('\n', ' ')  # Replace newlines with spaces for readability
+                                         .strip(), axis=1)
+
+# Filter out rows where 'Value' is NaN or empty
+df_unpivoted = df_melted[['Description', 'Value']].dropna(subset=['Value'])
+df_unpivoted = df_unpivoted[df_unpivoted['Value'] != '']
+
+# Clean up the 'Description' column by removing extra whitespace and stripping
+df_unpivoted['Description'] = df_unpivoted['Description'].str.replace(r'\s+', ' ', regex=True).str.strip()
+
+# Display the result
+print(df_unpivoted.to_string(index=False))
+```
+
+**Explanation:**
+
+1.  **Import Libraries:** Import `pandas` for data manipulation and `io` to read the string as a file.
+2.  **Load CSV Data:** The provided CSV data is stored in a multi-line string `csv_data`. `pd.read_csv(io.StringIO(csv_data), header=0)` reads this string into a pandas DataFrame, specifying `header=0` to indicate that the first row is the header.
+3.  **Set First Column as Index:** `df.set_index(df.columns[0])` makes the first column (which contains the descriptive labels like "Total no. of Executive Development Programs...") the index of the DataFrame. This is crucial for the next step.
+4.  **Transpose DataFrame:** `df.T` transposes the DataFrame. Now, the financial years (2023-24, 2022-23, 2021-22) become the columns, and the original index values become the row labels.
+5.  **Reset Index and Rename:**
+    *   `df_transposed.reset_index()` converts the current index (which holds the original descriptive labels) back into a regular column.
+    *   `df_transposed.rename(columns={'index': 'Financial Year'})` renames this new column to 'Financial Year' for clarity.
+6.  **Melt DataFrame:** `df_transposed.melt(id_vars='Financial Year', var_name='Original Header', value_name='Value')` is the core of the unpivoting process.
+    *   `id_vars='Financial Year'` specifies that 'Financial Year' is an identifier variable and should remain as is.
+    *   `var_name='Original Header'` means that the existing column names (which are the financial years) will be collected into a new column named 'Original Header'.
+    *   `value_name='Value'` means that the values from those transposed columns will be collected into a new column named 'Value'.
+7.  **Create 'Description' Column:**
+    *   `df_melted.apply(lambda row: f"{row['Original Header']} ({row['Financial Year']})" ... , axis=1)` iterates through each row of the `df_melted` DataFrame.
+    *   It constructs the 'Description' by combining the 'Original Header' (which now contains the original row names) and the 'Financial Year'.
+    *   `.replace('\n', ' ')` replaces any newline characters within the original header descriptions with spaces, making them more readable in the final 'Description' column.
+    *   `.strip()` removes leading/trailing whitespace.
+8.  **Filter Empty/Null Values:**
+    *   `df_melted[['Description', 'Value']].dropna(subset=['Value'])` selects only the 'Description' and 'Value' columns and then removes any rows where the 'Value' column is `NaN` (null).
+    *   `df_unpivoted[df_unpivoted['Value'] != '']` further filters out any rows where the 'Value' is an empty string.
+9.  **Clean Description Column:**
+    *   `df_unpivoted['Description'].str.replace(r'\s+', ' ', regex=True).str.strip()` uses regular expressions to replace sequences of one or more whitespace characters with a single space and then strips any leading/trailing whitespace from the 'Description' column.
+10. **Display Result:** `print(df_unpivoted.to_string(index=False))` prints the final unpivoted DataFrame to the console without the DataFrame index.
+
+This process effectively transforms the wide-format CSV into a long-format two-column table with descriptive labels.
+
+**Output:**
+
+```
+                                        Description      Value
+                                 Total no. of Executive Development Programs/ Management Development Programs (2023-24)         8
+                                    Total no. of Participants (2023-24)       309
+                                Total Annual Earnings (Amount in Rupees)(Excluding Lodging & Boarding Charges) (2023-24) 185367156
+                               Total Annual Earnings in Words (2023-24) Eighteen crores fifty three lakh sixty seven thousand  one hundred fifty six only
+                                 Total no. of Executive Development Programs/ Management Development Programs (2022-23)         8
+                                    Total no. of Participants (2022-23)       211
+                                Total Annual Earnings (Amount in Rupees)(Excluding Lodging & Boarding Charges) (2022-23) 194638053
+                               Total Annual Earnings in Words (2022-23) Nineteen Crores Forty Six Lakhs Thirty Eight Thousand Fifty Three Only
+                                 Total no. of Executive Development Programs/ Management Development Programs (2021-22)        18
+                                    Total no. of Participants (2021-22)      1090
+                                Total Annual Earnings (Amount in Rupees)(Excluding Lodging & Boarding Charges) (2021-22) 199299376
+                               Total Annual Earnings in Words (2021-22) Nineteen Crores Ninety Two Lakhs Ninety Nine Thousand Three Hundred Seventy Six Only
