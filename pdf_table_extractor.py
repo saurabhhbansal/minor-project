@@ -1,18 +1,15 @@
 """
-PDF Table Extractor with corrected top-to-bottom sorting,
-improved multi-page merging logic (no same-page merge),
-and a debug mode for tracing merge decisions.
+PDF Table Extractor with advanced header analysis to handle all table structures,
+prevent duplicate headers, and correctly process all data.
 """
 
 import camelot
 import pandas as pd
 import os
 import re
-import fitz
-from pathlib import Path
-import time
-from google.api_core import exceptions
-import google.generativeai as genai
+import fitz  # PyMuPDF
+from typing import Optional, Tuple
+from openpyxl.utils import get_column_letter
 
 # --- Helper Functions ---
 
@@ -30,219 +27,237 @@ def _horizontal_overlap(bbox1, bbox2):
     """Calculates the horizontal overlap ratio of two bounding boxes."""
     x1_l, _, x1_r, _ = bbox1
     x2_l, _, x2_r, _ = bbox2
-    
-    if x1_r < x2_l or x2_r < x1_l:
-        return 0
-    
+    if x1_r < x2_l or x2_r < x1_l: return 0
     intersection_width = min(x1_r, x2_r) - max(x1_l, x2_l)
     width1 = x1_r - x1_l
     width2 = x2_r - x2_l
-    
     return intersection_width / min(width1, width2) if min(width1, width2) > 0 else 0
 
-def _find_heading_above(page, bbox, band_px: int = 120) -> str | None:
-    """
-    Finds a likely heading text block just above a table's bounding box.
-    """
-    try:
-        _, _, _, y_top = bbox
-    except (TypeError, ValueError):
-        return None
-    
+def _find_heading_above(page, bbox, band_px: int = 120) -> Optional[str]:
+    """Finds a likely heading text block just above a table's bounding box."""
+    try: _, _, _, y_top = bbox
+    except (TypeError, ValueError): return None
     table_top_fitz = _to_fitz_y(page, y_top)
     blocks = page.get_text("blocks") or []
     candidates = []
-    
     for b in blocks:
-        x0, y0, x1, y1, text, *_ = b
-        if not text or not text.strip():
-            continue
-            
+        try: x0, y0, x1, y1, text, *_ = b
+        except ValueError: continue
+        if not text or not text.strip(): continue
         if y1 <= table_top_fitz and (table_top_fitz - y1) <= band_px:
             s = text.strip()
             if 2 <= len(s) <= 140:
                 digits = sum(c.isdigit() for c in s)
                 letters = sum(c.isalpha() for c in s)
-                if letters == 0 and digits > 0:
-                    continue
-                if digits / max(1, len(s)) > 0.4:
-                    continue
+                if letters == 0 and digits > 0: continue
+                if digits / max(1, len(s)) > 0.4: continue
                 distance = table_top_fitz - y1
                 candidates.append((distance, s))
-                
-    if not candidates:
-        return None
-        
+    if not candidates: return None
     candidates.sort(key=lambda t: t[0])
     return _sanitize_text(candidates[0][1])
 
 # --- Core Extraction and Grouping Logic ---
 
 def extract_and_group_tables(pdf_path, pages='all', min_rows=1, min_cols=1, debug=False):
-    """
-    Extracts tables with Camelot and then groups them across pages
-    using a relaxed, heading-aware merging logic.
-    """
+    """Extracts tables with Camelot and then groups them across pages."""
     try:
         if not os.path.exists(pdf_path):
             raise FileNotFoundError(f"PDF file not found: {pdf_path}")
-            
         print(f"Extracting tables from: {pdf_path} using Camelot...")
-        
-        tables = camelot.read_pdf(
-            pdf_path,
-            pages=pages,
-            flavor='lattice',
-            line_scale=40
-        )
-        
+        tables = camelot.read_pdf(pdf_path, pages=pages, flavor='lattice', line_scale=40)
         if not tables:
-            print("No tables found by Camelot.")
-            return {}
-            
+            print("No tables found by Camelot."); return {}
         print(f"Found {len(tables)} tables. Filtering and grouping...")
         filtered_tables = [t for t in tables if len(t.df) >= min_rows and len(t.df.columns) >= min_cols]
-        filtered_tables.sort(key=lambda t: (int(t.page), -t._bbox[3], t._bbox[0]))
 
+        def safe_bbox(t):
+            return getattr(t, "_bbox", t.parsing_report.get("bbox", (0, 0, 0, 0)))
+
+        sorted_filtered_tables = sorted(filtered_tables, key=lambda t: (int(t.page), -safe_bbox(t)[3], safe_bbox(t)[0]))
         groups = []
         doc = fitz.open(pdf_path)
 
-        for idx, t in enumerate(filtered_tables, start=1):
+        for idx, t in enumerate(sorted_filtered_tables, start=1):
             current_page = int(t.page)
             page = doc[current_page - 1]
-
-            heading = _find_heading_above(page, t._bbox, band_px=140)
-
-            if debug:
-                print(f"\n[Table {idx}] Page {current_page}, BBox={t._bbox}")
-                print(f"  Detected heading: {heading if heading else 'None'}")
-
+            bbox = safe_bbox(t)
+            heading = _find_heading_above(page, bbox, band_px=140)
+            t.heading = heading
+            if debug: print(f"\n[Table {idx}] Page {current_page}, BBox={bbox}\n  Detected heading: {heading if heading else 'None'}")
             if groups:
                 last_group = groups[-1]
                 last_table_in_group = last_group[-1]
                 last_page = int(last_table_in_group.page)
-
-                if heading:
-                    groups.append([t])
-                    if debug:
-                        print("  → New group started (heading found).")
+                if heading: groups.append([t])
                 else:
-                    overlap = _horizontal_overlap(t._bbox, last_table_in_group._bbox)
-                    if current_page == last_page + 1 and overlap > 0.5:
-                        last_group.append(t)
-                        if debug:
-                            print(f"  → Merged with previous group (page {last_page} → {current_page}, overlap={overlap:.2f}).")
-                    else:
-                        groups.append([t])
-                        if debug:
-                            print(f"  → New group started (no heading, overlap={overlap:.2f}, pages not consecutive).")
-            else:
-                groups.append([t])
-                if debug:
-                    print("  → First table, new group started.")
+                    overlap = _horizontal_overlap(bbox, safe_bbox(last_table_in_group))
+                    if current_page == last_page + 1 and overlap > 0.5: last_group.append(t)
+                    else: groups.append([t])
+            else: groups.append([t])
 
         final_tables = {}
         for i, group in enumerate(groups):
-            merged_df = pd.DataFrame()
-            
-            group.sort(key=lambda t: (int(t.page), -t._bbox[3], t._bbox[0]))
-            
-            for t in group:
-                merged_df = pd.concat([merged_df, t.df], ignore_index=True)
-            
-            key = f"Table_Group_{i+1}_Page_{group[0].page}"
+            merged_df = pd.concat([t.df for t in group], ignore_index=True)
+            group_heading = group[0].heading
+            key = group_heading if group_heading else f"Table_Group_{i+1}_Page_{group[0].page}"
+            original_key, counter = key, 1
+            while key in final_tables:
+                key = f"{original_key}_{counter}"; counter += 1
             final_tables[key] = merged_df
-
-        # Print summary
-        for h, d in final_tables.items():
-            print(f"\nGroup: {h} -> Rows: {len(d)}, Cols: {len(d.columns)}")
-        
+        doc.close()
+        for h, d in final_tables.items(): print(f"\nGroup: '{h}' -> Rows: {len(d)}, Cols: {len(d.columns)}")
         return final_tables
-        
     except Exception as e:
-        print(f"Error extracting tables: {str(e)}")
-        return {}
+        print(f"Error extracting tables: {str(e)}"); return {}
 
-# --- Main Functions ---
+# --- Function to Save Raw Tables for Debugging ---
 
-def save_tables_to_csv(merged_tables, output_dir="output"):
-    """Saves the grouped tables to CSV files."""
-    if not merged_tables:
-        print("No tables to save.")
-        return
-    Path(output_dir).mkdir(exist_ok=True)
-    for heading, df in merged_tables.items():
-        safe_heading = re.sub(r"[^\w\s-]", "", heading)
-        safe_heading = re.sub(r"\s+", "_", safe_heading).strip('_')
-        filename = f"{output_dir}/{safe_heading}.csv"
-        df.to_csv(filename, index=False)
-        print(f"Saved: {filename}")
-
-def call_gemini_api(csv_content: str, api_key: str) -> str | None:
-    """Calls the Gemini API to clean the CSV content."""
+def save_raw_tables_for_debug(tables_dict, output_filename="debug_raw_tables.xlsx"):
+    """Saves each extracted DataFrame to a separate sheet in an Excel file for inspection."""
+    print(f"\nSaving raw tables for debugging to '{output_filename}'...")
     try:
-        genai.configure(api_key=api_key)
-        model = genai.GenerativeModel('gemini-2.5-flash-lite') # Using the latest available flash model
-        prompt = f"Unpivot this CSV into a two-column format. The first column should be 'Description', and the second should be 'Value'. Combine all relevant headers and row names to create a descriptive label in the 'Description' column. Exclude any empty or null values.\n\n{csv_content}"
-        response = model.generate_content(prompt)
-        return response.text
+        with pd.ExcelWriter(output_filename, engine='openpyxl') as writer:
+            for table_name, df in tables_dict.items():
+                safe_sheet_name = re.sub(r'[\\/*?:"<>|]', "", table_name)[:31]
+                df.to_excel(writer, sheet_name=safe_sheet_name, index=False, header=False)
+        print("✅ Debug file saved successfully.")
     except Exception as e:
-        print(f"Error calling Gemini API: {e}")
-        return None
+        print(f"❌ Could not save debug file: {e}")
 
-def process_csvs_with_gemini(api_key: str, output_dir="output"):
-    """Processes all CSV files in the output directory with the Gemini API."""
-    print("\nStarting Gemini CSV processing...")
-    if not api_key:
-        print("API key is missing. Skipping Gemini processing.")
-        return
+# --- <<< NEW: ADVANCED HEADER ANALYSIS FUNCTION >>> ---
 
-    csv_files = [f for f in os.listdir(output_dir) if f.endswith(".csv") and "cleaned" not in f]
-    for i, filename in enumerate(csv_files):
-        csv_path = os.path.join(output_dir, filename)
-        print(f"Processing {csv_path}...")
-        
-        with open(csv_path, 'r', encoding='utf-8') as f:
-            csv_data = f.read()
-        
-        cleaned_csv = call_gemini_api(csv_data, api_key)
-        
-        if cleaned_csv:
-            base, ext = os.path.splitext(filename)
-            new_filename = f"{base}_cleaned{ext}"
-            new_filepath = os.path.join(output_dir, new_filename)
+def find_header_and_data_start(df: pd.DataFrame) -> Tuple[int, int, list]:
+    """
+    Analyzes the first few rows of a DataFrame to find the true header row,
+    data start row, and constructs a merged, clean header.
+    """
+    def is_row_numerical_index(row):
+        return all(str(item).strip() == str(i) for i, item in enumerate(row))
+    
+    start_offset = 0
+    if is_row_numerical_index(df.iloc[0]):
+        start_offset = 1
+
+    best_header_index = -1
+    max_text_cells = -1
+
+    # Find the row with the most non-empty text cells in the first 4 rows
+    for i in range(start_offset, min(start_offset + 4, len(df))):
+        text_cells = sum(1 for cell in df.iloc[i] if str(cell).strip())
+        if text_cells > max_text_cells:
+            max_text_cells = text_cells
+            best_header_index = i
+
+    if best_header_index == -1:
+        return 0, 1, df.iloc[0].astype(str).tolist() # Fallback
+
+    data_start_index = best_header_index + 1
+    
+    # Construct the merged header
+    primary_header = [str(h).replace('\n', ' ').strip() for h in df.iloc[best_header_index]]
+    
+    # Merge any info from rows above the primary header
+    for i in range(start_offset, best_header_index):
+        secondary_row = [str(h).replace('\n', ' ').strip() for h in df.iloc[i]]
+        for j, text in enumerate(secondary_row):
+            if text and text not in primary_header[j]:
+                primary_header[j] = f"{text} {primary_header[j]}".strip()
+                
+    return best_header_index, data_start_index, primary_header
+
+# --- Save to Excel (Main processing) ---
+
+def process_and_save_to_excel(merged_tables, output_filename="master_output.xlsx"):
+    """
+    Processes extracted tables and saves them to a single master Excel file.
+    """
+    if not merged_tables:
+        print("No tables to process for Excel."); return
+    all_data = []
+    print("\nProcessing tables for master Excel file...")
+    for table_heading, df in merged_tables.items():
+        if df.shape[1] < 2 or df.shape[0] < 2:
+            print(f"INFO: Skipping table '{table_heading}' due to insufficient size."); continue
             
-            # Clean up the response from Gemini
-            # It sometimes adds backticks for code blocks
-            cleaned_csv = cleaned_csv.strip().strip("`").strip()
-            if cleaned_csv.lower().startswith('csv'):
-                cleaned_csv = cleaned_csv[3:].lstrip()
+        # Use the advanced function to find the header and data
+        header_row_index, data_start_index, new_header = find_header_and_data_start(df)
+        
+        df_data = df[data_start_index:].copy()
+        
+        if df_data.empty:
+            print(f"INFO: Skipping table '{table_heading}' as no data rows found."); continue
+        
+        df_data.columns = new_header
+        id_col_name = df_data.columns[0]
+        
+        try:
+            if id_col_name == "" or pd.isna(id_col_name):
+                print(f"WARNING: Skipping table '{table_heading}' due to empty identifier column."); continue
+            df_melted = df_data.melt(id_vars=[id_col_name], var_name='ColumnHeader', value_name='Value')
+        except Exception as e:
+            print(f"WARNING: Skipping table '{table_heading}' during melt operation: {e}"); continue
+            
+        for _, row in df_melted.iterrows():
+            value = row['Value']
+            if pd.isna(value) or str(value).strip() in ['', '-']: continue
+            table_heading_clean = str(table_heading).replace('\n', ' ').strip()
+            row_category_clean = str(row[id_col_name]).replace('\n', ' ').strip()
+            col_category_clean = str(row['ColumnHeader']).replace('\n', ' ').strip()
+            header_tuple = (table_heading_clean, col_category_clean, row_category_clean)
+            all_data.append({'Header': header_tuple, 'Value': value})
+            
+    if not all_data:
+        print("No valid data extracted to write to Excel."); return
+        
+    final_df = pd.DataFrame(all_data)
+    
+    # --- <<< FIX: PROACTIVELY DE-DUPLICATE HEADERS >>> ---
+    if final_df['Header'].duplicated().any():
+        # Create a counter for each duplicated header
+        counts = final_df.groupby('Header').cumcount()
+        # Get the indices of the rows that are duplicates
+        duplicated_indices = counts[counts > 0].index
+        # Append a suffix to the last element of the tuple for each duplicate
+        for idx in duplicated_indices:
+            header_list = list(final_df.loc[idx, 'Header'])
+            header_list[-1] = f"{header_list[-1]}_{counts[idx]}"
+            final_df.loc[idx, 'Header'] = tuple(header_list)
 
+    multi_index = pd.MultiIndex.from_tuples(final_df['Header'])
+    wide_df = pd.DataFrame([final_df['Value'].values], columns=multi_index)
 
-            with open(new_filepath, 'w', encoding='utf-8') as f:
-                f.write(cleaned_csv)
-            print(f"Saved cleaned file: {new_filepath}")
+    try:
+        with pd.ExcelWriter(output_filename, engine='openpyxl') as writer:
+            wide_df.to_excel(writer, index=True, sheet_name='Sheet1')
+            worksheet = writer.sheets['Sheet1']
+            for col_idx in range(1, worksheet.max_column + 1):
+                col_letter = get_column_letter(col_idx)
+                max_length = 0
+                for cell in worksheet[col_letter]:
+                    try:
+                        if len(str(cell.value)) > max_length: max_length = len(str(cell.value))
+                    except: pass
+                adjusted_width = (max_length + 2)
+                worksheet.column_dimensions[col_letter].width = adjusted_width
+        print(f"\n✅ Successfully saved master data to '{output_filename}' with auto-fitted columns.")
+    except Exception as e:
+        print(f"\n❌ Error saving to master Excel file: {e}")
 
-        if i < len(csv_files) - 1:
-            print("Waiting 2 seconds before next request...")
-            time.sleep(2) # Wait for 2 seconds to respect 30 RPM limit
+# --- Main ---
 
 def main(debug=False):
-    pdf_path = "NIRF_IITBombay_2025_Overall_Category.pdf"
+    """Main function to run the PDF table extraction and processing."""
+    pdf_path = "iit_delhi_data.pdf"
     if not os.path.exists(pdf_path):
-        print(f"Error: PDF file not found at '{pdf_path}'. Please make sure the file is in the same directory.")
-        return
-
-    api_key = input("Please enter your Gemini API key: ").strip()
+        print(f"Error: PDF file not found at '{pdf_path}'."); return
     
     print("\nStarting table extraction and grouping...")
-    merged = extract_and_group_tables(pdf_path, debug=debug)
+    merged_tables = extract_and_group_tables(pdf_path, debug=debug)
     
-    if not merged:
-        print("No tables could be extracted or merged.")
-    else:
-        save_tables_to_csv(merged)
-        process_csvs_with_gemini(api_key)
+    if merged_tables:
+        save_raw_tables_for_debug(merged_tables)
+        process_and_save_to_excel(merged_tables, output_filename="master_output.xlsx")
 
 if __name__ == "__main__":
-    main(debug=True)  # Enable debug mode
+    main(debug=False)
