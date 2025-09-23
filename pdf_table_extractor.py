@@ -151,65 +151,86 @@ def find_header_and_data_start(df: pd.DataFrame) -> Tuple[int, int, list]:
                     meaningful += 1
         return meaningful
     
+    def is_header_row(row):
+        """Check if a row looks like a header row"""
+        row_str = [str(cell).strip().lower() for cell in row]
+        # Look for common header indicators
+        header_keywords = ['academic year', 'program', 'students', 'year', 'total', 'no.', 'amount']
+        return any(any(keyword in cell for keyword in header_keywords) for cell in row_str)
+    
     start_offset = 0
     if len(df) > 0 and is_row_numerical_index(df.iloc[0]):
         start_offset = 1
 
     best_header_index = -1
-    max_meaningful_cells = -1
-
-    # Look through more rows to find the best header
-    search_range = min(start_offset + 6, len(df))
     
+    # Strategy 1: Look for obvious header rows first
+    search_range = min(start_offset + 4, len(df))
     for i in range(start_offset, search_range):
         if i >= len(df):
             break
-            
         row = df.iloc[i]
-        meaningful_cells = count_meaningful_cells(row)
         
-        # Skip rows that look like data (contain years)
-        if has_year_pattern(row):
+        # Skip rows that are clearly data (contain year patterns but no header keywords)
+        if has_year_pattern(row) and not is_header_row(row):
             continue
             
-        # Prefer rows with more meaningful content
-        if meaningful_cells > max_meaningful_cells:
-            max_meaningful_cells = meaningful_cells
+        # Check if this looks like a header row
+        if is_header_row(row):
             best_header_index = i
-
-    if best_header_index == -1:
-        # Fallback to first non-year row
-        for i in range(start_offset, min(start_offset + 4, len(df))):
-            if i < len(df) and not has_year_pattern(df.iloc[i]):
-                best_header_index = i
-                break
-        
-        if best_header_index == -1:
-            best_header_index = start_offset if start_offset < len(df) else 0
-
-    # Find where data actually starts (first row with year pattern or after header)
-    data_start_index = best_header_index + 1
-    for i in range(best_header_index + 1, min(best_header_index + 4, len(df))):
-        if i < len(df) and has_year_pattern(df.iloc[i]):
-            data_start_index = i
             break
     
-    # Construct the merged header
+    # Strategy 2: If no obvious header found, use meaningful content approach
+    if best_header_index == -1:
+        max_meaningful_cells = -1
+        for i in range(start_offset, search_range):
+            if i >= len(df):
+                break
+            row = df.iloc[i]
+            meaningful_cells = count_meaningful_cells(row)
+            
+            # Skip rows that look like data (contain years)
+            if has_year_pattern(row):
+                continue
+                
+            # Prefer rows with more meaningful content
+            if meaningful_cells > max_meaningful_cells:
+                max_meaningful_cells = meaningful_cells
+                best_header_index = i
+
+    # Strategy 3: Final fallback
+    if best_header_index == -1:
+        best_header_index = start_offset if start_offset < len(df) else 0
+
+    # Find where data actually starts 
+    data_start_index = best_header_index + 1
+    
+    # Don't try to merge headers for simple cases - just use the header row as is
     if best_header_index < len(df):
         primary_header = [str(h).replace('\n', ' ').strip() for h in df.iloc[best_header_index]]
     else:
         primary_header = [f"Column_{i}" for i in range(len(df.columns))]
     
-    # Merge any info from rows above the primary header
-    for i in range(start_offset, best_header_index):
-        if i < len(df):
-            secondary_row = [str(h).replace('\n', ' ').strip() for h in df.iloc[i]]
-            for j, text in enumerate(secondary_row):
-                if j < len(primary_header) and text and text not in primary_header[j] and len(text) > 2:
-                    if primary_header[j] and primary_header[j] != 'nan':
-                        primary_header[j] = f"{text} {primary_header[j]}".strip()
-                    else:
-                        primary_header[j] = text
+    # Only merge if we have a complex table structure with multiple potential header rows
+    # and the primary header doesn't already look complete
+    should_merge = False
+    if best_header_index > start_offset:
+        # Check if primary header has empty or incomplete cells
+        empty_or_short = sum(1 for h in primary_header if not h or h == 'nan' or len(h.strip()) < 2)
+        if empty_or_short > len(primary_header) * 0.3:  # More than 30% empty/short
+            should_merge = True
+    
+    if should_merge:
+        # Merge any info from rows above the primary header
+        for i in range(start_offset, best_header_index):
+            if i < len(df):
+                secondary_row = [str(h).replace('\n', ' ').strip() for h in df.iloc[i]]
+                for j, text in enumerate(secondary_row):
+                    if j < len(primary_header) and text and text not in primary_header[j] and len(text) > 2:
+                        if primary_header[j] and primary_header[j] != 'nan':
+                            primary_header[j] = f"{text} {primary_header[j]}".strip()
+                        else:
+                            primary_header[j] = text
     
     # Clean up header names
     cleaned_header = []
@@ -223,13 +244,12 @@ def find_header_and_data_start(df: pd.DataFrame) -> Tuple[int, int, list]:
 
 def process_pivot_table(df_data, headers, table_heading, debug=False):
     """
-    Processes tables where Academic Year columns repeat, indicating grouped data structure.
-    Example: [Academic Year, Data1, Data2, Academic Year, Data3, Academic Year, Data4, Data5]
+    Converts pivot tables with repeating Academic Year columns into normalized format.
+    Creates a proper table with Academic Year as first column and all metrics as separate columns.
     """
-    processed_data = []
-    
     if debug:
-        print(f"Processing pivot table with headers: {headers}")
+        print(f"Converting pivot table to normalized format")
+        print(f"Original headers: {headers}")
         print(f"Data shape: {df_data.shape}")
         print(f"First few rows:\n{df_data.head()}")
     
@@ -245,60 +265,99 @@ def process_pivot_table(df_data, headers, table_heading, debug=False):
     # Add end position for easier processing
     year_positions.append(len(headers))
     
-    # Process each row
+    # Collect all unique academic years and metrics
+    all_years = set()
+    all_metrics = []
+    
+    # First pass: collect all years and metrics
     for row_idx, row in df_data.iterrows():
-        if debug:
-            print(f"\nProcessing row {row_idx}: {row.tolist()}")
-        
-        # Process each academic year group
         for i in range(len(year_positions) - 1):
             start_pos = year_positions[i]
             end_pos = year_positions[i + 1]
             
-            # Get the academic year from the year column
+            # Get the academic year
             academic_year = str(row.iloc[start_pos]).strip()
-            if not academic_year or academic_year == 'nan':
-                if debug: print(f"  Skipping empty academic year at position {start_pos}")
-                continue
+            if academic_year and academic_year != 'nan':
+                all_years.add(academic_year)
             
-            if debug:
-                print(f"  Processing year group: '{academic_year}', columns {start_pos} to {end_pos}")
-            
-            # Process data columns for this academic year
+            # Get metrics for this year group
             for col_idx in range(start_pos + 1, end_pos):
-                if col_idx < len(headers) and col_idx < len(row):
-                    column_header = headers[col_idx]
-                    value = row.iloc[col_idx]
-                    
-                    if debug:
-                        print(f"    Checking column {col_idx}: '{column_header}' = '{value}'")
-                    
-                    # Skip empty values
-                    if pd.isna(value) or str(value).strip() in ['', '-', 'nan']:
-                        if debug: print(f"      Skipping empty value")
-                        continue
-                    
-                    # Create a meaningful row identifier from the first non-Academic Year column in the first group
-                    if i == 0:  # Use first group for row identifier
-                        # Find the first non-Academic Year column in the first group
-                        first_data_col = year_positions[0] + 1
-                        if first_data_col < year_positions[1] and first_data_col < len(row):
-                            row_category = f"{headers[first_data_col]}_{row.iloc[first_data_col]}"
-                        else:
-                            row_category = f"Row_{row_idx}"
-                    else:
-                        row_category = f"Row_{row_idx}"
-                    
-                    # Create hierarchical header
-                    table_heading_clean = str(table_heading).replace('\n', ' ').strip()
-                    header_tuple = (table_heading_clean, f"{academic_year} - {column_header}", row_category)
-                    processed_data.append({'Header': header_tuple, 'Value': str(value).strip()})
-                    
-                    if debug:
-                        print(f"      Added: {header_tuple} = {value}")
+                if col_idx < len(headers):
+                    metric = headers[col_idx]
+                    if metric not in all_metrics:
+                        all_metrics.append(metric)
+    
+    # Sort years chronologically
+    sorted_years = sorted(list(all_years))
     
     if debug:
-        print(f"\nProcessed {len(processed_data)} data points from pivot table")
+        print(f"All academic years found: {sorted_years}")
+        print(f"All metrics found: {all_metrics}")
+    
+    # Create normalized data structure
+    normalized_data = []
+    
+    # For each year, collect all available data
+    for year in sorted_years:
+        year_data = {'Academic Year': year}
+        
+        # Initialize all metrics as empty
+        for metric in all_metrics:
+            year_data[metric] = ''
+        
+        # Fill in available data from all rows
+        for row_idx, row in df_data.iterrows():
+            for i in range(len(year_positions) - 1):
+                start_pos = year_positions[i]
+                end_pos = year_positions[i + 1]
+                
+                # Check if this group has our target year
+                row_year = str(row.iloc[start_pos]).strip()
+                if row_year == year:
+                    # Extract data for this year group
+                    for col_idx in range(start_pos + 1, end_pos):
+                        if col_idx < len(headers) and col_idx < len(row):
+                            metric = headers[col_idx]
+                            value = str(row.iloc[col_idx]).strip()
+                            if value and value != 'nan':
+                                year_data[metric] = value
+        
+        normalized_data.append(year_data)
+    
+    # Convert to DataFrame
+    normalized_df = pd.DataFrame(normalized_data)
+    
+    if debug:
+        print(f"Normalized table shape: {normalized_df.shape}")
+        print(f"Normalized table:")
+        print(normalized_df)
+    
+    # Now process this normalized table using regular melting
+    processed_data = []
+    
+    if len(normalized_df.columns) > 1:
+        # Melt the normalized data
+        melted_df = normalized_df.melt(
+            id_vars=['Academic Year'], 
+            var_name='Metric', 
+            value_name='Value'
+        )
+        
+        # Process melted data
+        for _, row in melted_df.iterrows():
+            value = row['Value']
+            if pd.isna(value) or str(value).strip() in ['', '-', 'nan']:
+                continue
+            
+            table_heading_clean = str(table_heading).replace('\n', ' ').strip()
+            academic_year = str(row['Academic Year']).strip()
+            metric = str(row['Metric']).strip()
+            
+            header_tuple = (table_heading_clean, metric, academic_year)
+            processed_data.append({'Header': header_tuple, 'Value': str(value).strip()})
+    
+    if debug:
+        print(f"Processed {len(processed_data)} data points from normalized pivot table")
     
     return processed_data
 
