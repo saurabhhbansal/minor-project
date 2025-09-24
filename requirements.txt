@@ -2,4 +2,4 @@ camelot-py[cv]
 pandas
 opencv-python
 ghostscript
-pymupdf
+pymupdfgoogle-generativeai
