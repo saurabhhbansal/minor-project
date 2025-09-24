@@ -243,125 +243,73 @@ def find_header_and_data_start(df: pd.DataFrame) -> Tuple[int, int, list]:
     return best_header_index, data_start_index, cleaned_header
 
 def process_pivot_table(df_data, headers, table_heading, debug=False):
+    """Block-based processing of repeating Academic Year sections.
+
+    Each occurrence of 'Academic Year' (or its auto-suffixed variant) starts a new block.
+    All columns until (but excluding) the next 'Academic Year' column belong to that block.
+    For every row, the year value appearing under the block's own Academic Year column is paired
+    ONLY with the metrics inside that same block. This prevents accidental pairing of a metric
+    with an earlier/later year's value simply because they share a physical row.
+
+    Returns a list of record dicts: {'Header': (table_heading, metric_name, academic_year), 'Value': value}
+    The outer pipeline may later drop the table_heading level for the final 2-level (Metric, Year) layout.
     """
-    Converts pivot tables with repeating Academic Year columns into normalized format.
-    Creates a proper table with Academic Year as first column and all metrics as separate columns.
-    """
     if debug:
-        print(f"Converting pivot table to normalized format")
-        print(f"Original headers: {headers}")
-        print(f"Data shape: {df_data.shape}")
-        print(f"First few rows:\n{df_data.head()}")
-    
-    # Find Academic Year column positions
-    year_positions = []
-    for i, header in enumerate(headers):
-        if header == 'Academic Year' or header.startswith('Academic Year_'):
-            year_positions.append(i)
-    
+        print("Block-based pivot normalization")
+        print(f"Headers: {headers}")
+        print(f"Shape: {df_data.shape}")
+
+    # Identify positions of Academic Year columns
+    year_positions = [i for i, h in enumerate(headers) if h == 'Academic Year' or h.startswith('Academic Year_')]
+    if not year_positions:
+        if debug:
+            print("No repeating Academic Year columns found; fallback to generic handling.")
+        return []
+
+    # Append sentinel (end of columns) for block slicing logic
+    year_positions_sorted = sorted(year_positions)
+    year_positions_sorted.append(len(headers))
+
+    table_heading_clean = str(table_heading).replace('\n', ' ').strip()
+    processed_data: List[Dict] = []
+
+    # Iterate over blocks
+    for idx in range(len(year_positions_sorted) - 1):
+        year_col = year_positions_sorted[idx]
+        next_boundary = year_positions_sorted[idx + 1]
+        metric_cols = [c for c in range(year_col + 1, next_boundary) if c < len(headers)]
+        block_id = idx + 1
+        if debug:
+            block_header_names = [headers[c] for c in metric_cols]
+            print(f"Block {block_id}: year_col={year_col} -> metrics={block_header_names}")
+
+        for row_i, row in df_data.iterrows():
+            # Extract the year for this block
+            if year_col >= len(row):
+                continue
+            year_raw = str(row.iloc[year_col]).strip()
+            if not year_raw or year_raw.lower() in ['nan', '-']:
+                # Skip rows without a valid year in this block
+                continue
+
+            # For each metric in this block, pair with the block's year only
+            for mc in metric_cols:
+                if mc >= len(row):
+                    continue
+                metric_name = headers[mc]
+                value_raw = row.iloc[mc]
+                val_str = str(value_raw).strip()
+                if val_str == '0':
+                    cleaned_val = 0
+                elif pd.isna(value_raw) or val_str.lower() in ['', '-', 'nan']:
+                    cleaned_val = None
+                else:
+                    cleaned_val = val_str
+                header_tuple = (table_heading_clean, metric_name, year_raw)
+                processed_data.append({'Header': header_tuple, 'Value': cleaned_val})
+
     if debug:
-        print(f"Academic Year positions: {year_positions}")
-    
-    # Add end position for easier processing
-    year_positions.append(len(headers))
-    
-    # Collect all unique academic years and metrics
-    all_years = set()
-    all_metrics = []
-    
-    # First pass: collect all years and metrics
-    for row_idx, row in df_data.iterrows():
-        for i in range(len(year_positions) - 1):
-            start_pos = year_positions[i]
-            end_pos = year_positions[i + 1]
-            
-            # Get the academic year
-            academic_year = str(row.iloc[start_pos]).strip()
-            if academic_year and academic_year != 'nan':
-                all_years.add(academic_year)
-            
-            # Get metrics for this year group
-            for col_idx in range(start_pos + 1, end_pos):
-                if col_idx < len(headers):
-                    metric = headers[col_idx]
-                    if metric not in all_metrics:
-                        all_metrics.append(metric)
-    
-    # Sort years chronologically
-    sorted_years = sorted(list(all_years))
-    
-    if debug:
-        print(f"All academic years found: {sorted_years}")
-        print(f"All metrics found: {all_metrics}")
-    
-    # Create normalized data structure
-    normalized_data = []
-    
-    # For each year, collect all available data
-    for year in sorted_years:
-        year_data = {'Academic Year': year}
-        
-        # Initialize all metrics as empty
-        for metric in all_metrics:
-            year_data[metric] = ''
-        
-        # Fill in available data from all rows
-        for row_idx, row in df_data.iterrows():
-            for i in range(len(year_positions) - 1):
-                start_pos = year_positions[i]
-                end_pos = year_positions[i + 1]
-                
-                # Check if this group has our target year
-                row_year = str(row.iloc[start_pos]).strip()
-                if row_year == year:
-                    # Extract data for this year group
-                    for col_idx in range(start_pos + 1, end_pos):
-                        if col_idx < len(headers) and col_idx < len(row):
-                            metric = headers[col_idx]
-                            value = str(row.iloc[col_idx]).strip()
-                            if value and value != 'nan':
-                                year_data[metric] = value
-        
-        normalized_data.append(year_data)
-    
-    # Convert to DataFrame
-    normalized_df = pd.DataFrame(normalized_data)
-    
-    if debug:
-        print(f"Normalized table shape: {normalized_df.shape}")
-        print(f"Normalized table:")
-        print(normalized_df)
-    
-    # Now process this normalized table using regular melting
-    processed_data = []
-    
-    if len(normalized_df.columns) > 1:
-        # Melt the normalized data
-        melted_df = normalized_df.melt(
-            id_vars=['Academic Year'], 
-            var_name='Metric', 
-            value_name='Value'
-        )
-        
-        # Process melted data
-        for _, row in melted_df.iterrows():
-            raw_val = row['Value']
-            val_str = str(raw_val).strip()
-            if val_str == '0':
-                cleaned_val = 0
-            elif pd.isna(raw_val) or val_str.lower() in ['', '-', 'nan']:
-                cleaned_val = None
-            else:
-                cleaned_val = val_str
-            table_heading_clean = str(table_heading).replace('\n', ' ').strip()
-            academic_year = str(row['Academic Year']).strip()
-            metric = str(row['Metric']).strip()
-            header_tuple = (table_heading_clean, metric, academic_year)
-            processed_data.append({'Header': header_tuple, 'Value': cleaned_val})
-    
-    if debug:
-        print(f"Processed {len(processed_data)} data points from normalized pivot table")
-    
+        print(f"Processed {len(processed_data)} data points across {len(year_positions)} block(s)")
     return processed_data
 
 # --- Special handling for combined Ph.D table (multiple mini-tables stacked) ---
