@@ -345,21 +345,116 @@ def process_pivot_table(df_data, headers, table_heading, debug=False):
         
         # Process melted data
         for _, row in melted_df.iterrows():
-            value = row['Value']
-            if pd.isna(value) or str(value).strip() in ['', '-', 'nan']:
-                continue
-            
+            raw_val = row['Value']
+            val_str = str(raw_val).strip()
+            cleaned_val = None if pd.isna(raw_val) or val_str.lower() in ['', '-', 'nan'] else val_str
             table_heading_clean = str(table_heading).replace('\n', ' ').strip()
             academic_year = str(row['Academic Year']).strip()
             metric = str(row['Metric']).strip()
-            
             header_tuple = (table_heading_clean, metric, academic_year)
-            processed_data.append({'Header': header_tuple, 'Value': str(value).strip()})
+            processed_data.append({'Header': header_tuple, 'Value': cleaned_val})
     
     if debug:
         print(f"Processed {len(processed_data)} data points from normalized pivot table")
     
     return processed_data
+
+# --- Special handling for combined Ph.D table (multiple mini-tables stacked) ---
+def process_combined_phd_table(df_data: pd.DataFrame, table_heading: str, all_data: list, debug=False):
+    """Splits the Ph.D combined table into two logical subtables and appends melted rows.
+
+    Expected patterns:
+      - One cell somewhere contains 'Total Students' (first mini-table metric heading)
+      - A later row (not first) contains >=2 academic year patterns across non-first columns (year header row)
+      - Rows between 'Total Students' header row and year header row contain category labels (Full Time, Part Time) with values under the 'Total Students' column
+      - Rows after the year header row contain category labels with yearly values
+    """
+    if debug:
+        print("Applying combined Ph.D table logic...")
+
+    year_pattern = re.compile(r'20\d{2}-\d{2}')
+
+    # Locate 'Total Students' cell
+    total_students_pos = None  # (row_idx, col_idx)
+    for r_idx in range(len(df_data)):
+        for c_idx in range(len(df_data.columns)):
+            cell = str(df_data.iat[r_idx, c_idx]).strip()
+            if cell.lower() == 'total students':
+                total_students_pos = (r_idx, c_idx)
+                break
+        if total_students_pos:
+            break
+
+    if not total_students_pos:
+        if debug:
+            print("Did not find 'Total Students' marker; falling back to default handling.")
+        return False  # signal not processed
+
+    ts_row, ts_col = total_students_pos
+
+    # Find year header row
+    year_header_row = None
+    for r_idx in range(ts_row + 1, len(df_data)):
+        row = df_data.iloc[r_idx]
+        # Count year-like cells excluding first column
+        year_hits = 0
+        non_empty = 0
+        for c_idx in range(1, len(df_data.columns)):
+            val = str(row.iloc[c_idx]).strip()
+            if val and val.lower() not in ['nan', '-', '']:
+                non_empty += 1
+                if year_pattern.fullmatch(val):
+                    year_hits += 1
+        if year_hits >= 2 and year_hits >= max(1, non_empty - year_hits):
+            year_header_row = r_idx
+            break
+
+    if not year_header_row:
+        if debug:
+            print("Did not find year header row; falling back to default handling.")
+        return False
+
+    if debug:
+        print(f"Found 'Total Students' at row {ts_row}, col {ts_col}; year header row at {year_header_row}")
+
+    table_heading_clean = str(table_heading).replace('\n', ' ').strip()
+
+    # --- Subtable 1: Total Students aggregate ---
+    rows_added = 0
+    for r_idx in range(ts_row + 1, year_header_row):
+        category = str(df_data.iat[r_idx, 0]).replace('\n', ' ').strip()
+        if not category or category.lower() in ['nan', '-', '']:
+            continue
+        raw_val = str(df_data.iat[r_idx, ts_col]).strip() if ts_col < len(df_data.columns) else ''
+        cleaned_val = None if raw_val.lower() in ['', '-', 'nan'] else raw_val
+        header_tuple = (table_heading_clean, 'Total Students', category)
+        all_data.append({'Header': header_tuple, 'Value': cleaned_val})
+        rows_added += 1
+
+    # --- Subtable 2: Yearly distribution ---
+    years = []
+    year_row = df_data.iloc[year_header_row]
+    for c_idx in range(1, len(df_data.columns)):
+        val = str(year_row.iloc[c_idx]).strip()
+        if year_pattern.fullmatch(val):
+            years.append((c_idx, val))
+
+    for r_idx in range(year_header_row + 1, len(df_data)):
+        category = str(df_data.iat[r_idx, 0]).replace('\n', ' ').strip()
+        if not category or category.lower() in ['nan', '-', '']:
+            continue
+        for c_idx, year_label in years:
+            if c_idx >= len(df_data.columns):
+                continue
+            value = str(df_data.iat[r_idx, c_idx]).strip()
+            cleaned_val = None if value.lower() in ['', '-', 'nan'] else value
+            header_tuple = (table_heading_clean, year_label, category)
+            all_data.append({'Header': header_tuple, 'Value': cleaned_val})
+            rows_added += 1
+
+    if debug:
+        print(f"Combined Ph.D table processed; added {rows_added} data points (aggregate + yearly).")
+    return True  # processed
 
 # --- Save to Excel (Main processing) ---
 
@@ -401,9 +496,83 @@ def process_and_save_to_excel(merged_tables, output_filename="master_output.xlsx
                 if data_start_index < len(df):
                     print(f"  First data row: {df.iloc[data_start_index].tolist()}")
             
-            # Check if table contains "Qualification" column and skip if it does
-            if any("qualification" in str(header).lower() for header in new_header):
-                if debug: print(f"INFO: Skipping table '{table_heading}' as it contains a 'Qualification' column.")
+            # Determine presence of specific columns for special handling
+            lowered_headers = [str(h).lower() for h in new_header]
+            contains_qualification = any("qualification" in h for h in lowered_headers)
+            contains_designation = any("designation" in h for h in lowered_headers)
+            contains_gender = any(h == "gender" for h in lowered_headers)
+
+            # SPECIAL CASE: Employee roster table (has Qualification + Designation columns)
+            # We don't want the raw 600+ row table. Instead, we aggregate counts by Designation and Gender
+            if contains_qualification and contains_designation:
+                if debug:
+                    print(f"Detected employee roster table '{table_heading}'. Will aggregate counts by Designation and Gender instead of full melt.")
+
+                # Validate data_start_index
+                if data_start_index >= len(df):
+                    if debug: print(f"WARNING: data_start_index {data_start_index} >= df length {len(df)} for roster table. Skipping.")
+                    skipped_count += 1
+                    continue
+
+                df_data = df.iloc[data_start_index:].copy()
+
+                # Assign headers (including de-dup if needed)
+                if len(new_header) != len(df_data.columns):
+                    if debug:
+                        print(f"Roster table header length mismatch ({len(new_header)} vs {len(df_data.columns)}). Using original columns.")
+                    new_header = df_data.columns.tolist()
+
+                seen_headers = {}
+                clean_headers = []
+                for header in new_header:
+                    if header in seen_headers:
+                        seen_headers[header] += 1
+                        clean_headers.append(f"{header}_{seen_headers[header]}")
+                    else:
+                        seen_headers[header] = 0
+                        clean_headers.append(header)
+                df_data.columns = clean_headers
+
+                # Locate columns (case-insensitive)
+                def find_col(target):
+                    for c in df_data.columns:
+                        if str(c).strip().lower() == target:
+                            return c
+                    return None
+
+                designation_col = find_col('designation')
+                gender_col = find_col('gender') if contains_gender else None
+
+                if not designation_col:
+                    if debug: print("ERROR: Could not find 'Designation' column after cleaning. Skipping roster aggregation.")
+                    skipped_count += 1
+                    continue
+
+                table_heading_clean = str(table_heading).replace('\n', ' ').strip()
+                rows_added = 0
+
+                # Only aggregate gender counts (designation counts removed per request)
+                if gender_col:
+                    gender_series = (df_data[gender_col]
+                                     .astype(str)
+                                     .str.replace('\n', ' ', regex=False)
+                                     .str.strip())
+                    gender_series = gender_series[gender_series.str.len() > 0]
+                    gender_counts = gender_series.value_counts(dropna=True)
+                    for gender, count in gender_counts.items():
+                        # Use blank third level to avoid adding a visible 'gender' title
+                        header_tuple = (table_heading_clean, f"Number of {gender}", '')
+                        all_data.append({'Header': header_tuple, 'Value': int(count)})
+                        rows_added += 1
+
+                if debug:
+                    print(f"Added {rows_added} aggregated gender count columns from roster table (designation counts omitted).")
+                processed_count += 1
+                continue
+
+            # Skip any other table that just has 'Qualification' (not the roster pattern we handle)
+            if contains_qualification:
+                if debug: print(f"INFO: Skipping table '{table_heading}' as it contains a 'Qualification' column (non-roster handling).")
                 skipped_count += 1
                 continue
             
@@ -419,8 +588,24 @@ def process_and_save_to_excel(merged_tables, output_filename="master_output.xlsx
                 skipped_count += 1
                 continue
             
+            # Special-case adjustment: for 2-column tables we want ALL rows treated as data.
+            # These tables usually have no real header row; every row is a question/answer pair.
+            if df.shape[1] == 2 and data_start_index > 0:
+                if debug:
+                    print(f"Overriding data_start_index {data_start_index} -> 0 for 2-column key/value table to avoid losing rows")
+                data_start_index = 0
+
             # Use iloc for safer integer-based indexing
             df_data = df.iloc[data_start_index:].copy()
+            
+            # BEFORE proceeding, check if this is the combined Ph.D table pattern and process specially
+            if 'ph.d (student pursuing doctoral program' in str(new_header[0]).lower() and df_data.shape[1] >= 3:
+                if debug:
+                    print("Attempting combined Ph.D table specialized split...")
+                processed_ok = process_combined_phd_table(df_data, table_heading, all_data, debug=debug)
+                if processed_ok:
+                    processed_count += 1
+                    continue
             
             if debug:
                 print(f"Data frame shape after slicing: {df_data.shape}")
@@ -450,6 +635,31 @@ def process_and_save_to_excel(merged_tables, output_filename="master_output.xlsx
             
             df_data.columns = clean_headers
             
+            # Special handling: if the table has exactly 2 columns, treat
+            # the first column as the header label and the second as the value.
+            # We keep a 3-level tuple shape for consistency with other outputs
+            # by using a constant placeholder (e.g. 'Value') for the middle level.
+            if len(df_data.columns) == 2:
+                if debug:
+                    print("Detected 2-column table; applying key-value extraction logic")
+                col_key, col_val = df_data.columns.tolist()
+                rows_processed = 0
+                table_heading_clean = str(table_heading).replace('\n', ' ').strip()
+                for _, r in df_data.iterrows():
+                    key_label = str(r[col_key]).replace('\n', ' ').strip()
+                    val = r[col_val]
+                    if not key_label or key_label.lower() in ['-', 'nan']:
+                        continue
+                    val_str = str(val).strip()
+                    cleaned_val = None if pd.isna(val) or val_str.lower() in ['', '-', 'nan'] else val_str
+                    header_tuple = (table_heading_clean, key_label, '')  # third level blank
+                    all_data.append({'Header': header_tuple, 'Value': cleaned_val})
+                    rows_processed += 1
+                if debug:
+                    print(f"Successfully processed {rows_processed} key-value rows from 2-column table '{table_heading}'")
+                processed_count += 1
+                continue
+
             # Handle tables with repeating Academic Year columns (pivot structure)
             if clean_headers.count('Academic Year') > 1 or any('Academic Year_' in h for h in clean_headers):
                 if debug: print(f"Detected pivot table structure with multiple Academic Year columns")
@@ -500,15 +710,14 @@ def process_and_save_to_excel(merged_tables, output_filename="master_output.xlsx
             # Process each row in the melted data
             rows_processed = 0
             for _, row in df_melted.iterrows():
-                value = row['Value']
-                if pd.isna(value) or str(value).strip() in ['', '-']: 
-                    continue
-                
+                raw_val = row['Value']
+                val_str = str(raw_val).strip()
+                cleaned_val = None if pd.isna(raw_val) or val_str.lower() in ['', '-', 'nan'] else raw_val
                 table_heading_clean = str(table_heading).replace('\n', ' ').strip()
                 row_category_clean = str(row[id_col_name]).replace('\n', ' ').strip()
                 col_category_clean = str(row['ColumnHeader']).replace('\n', ' ').strip()
                 header_tuple = (table_heading_clean, col_category_clean, row_category_clean)
-                all_data.append({'Header': header_tuple, 'Value': value})
+                all_data.append({'Header': header_tuple, 'Value': cleaned_val})
                 rows_processed += 1
             
             if debug: print(f"Successfully processed {rows_processed} rows from table '{table_heading}'")
