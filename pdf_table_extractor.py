@@ -8,7 +8,7 @@ import pandas as pd
 import os
 import re
 import fitz  # PyMuPDF
-from typing import Optional, Tuple
+from typing import Optional, Tuple, List, Dict
 from openpyxl.utils import get_column_letter
 
 # --- Helper Functions ---
@@ -347,7 +347,12 @@ def process_pivot_table(df_data, headers, table_heading, debug=False):
         for _, row in melted_df.iterrows():
             raw_val = row['Value']
             val_str = str(raw_val).strip()
-            cleaned_val = None if pd.isna(raw_val) or val_str.lower() in ['', '-', 'nan'] else val_str
+            if val_str == '0':
+                cleaned_val = 0
+            elif pd.isna(raw_val) or val_str.lower() in ['', '-', 'nan']:
+                cleaned_val = None
+            else:
+                cleaned_val = val_str
             table_heading_clean = str(table_heading).replace('\n', ' ').strip()
             academic_year = str(row['Academic Year']).strip()
             metric = str(row['Metric']).strip()
@@ -426,7 +431,12 @@ def process_combined_phd_table(df_data: pd.DataFrame, table_heading: str, all_da
         if not category or category.lower() in ['nan', '-', '']:
             continue
         raw_val = str(df_data.iat[r_idx, ts_col]).strip() if ts_col < len(df_data.columns) else ''
-        cleaned_val = None if raw_val.lower() in ['', '-', 'nan'] else raw_val
+        if raw_val == '0':
+            cleaned_val = 0
+        elif raw_val.lower() in ['', '-', 'nan']:
+            cleaned_val = None
+        else:
+            cleaned_val = raw_val
         header_tuple = (table_heading_clean, 'Total Students', category)
         all_data.append({'Header': header_tuple, 'Value': cleaned_val})
         rows_added += 1
@@ -447,7 +457,12 @@ def process_combined_phd_table(df_data: pd.DataFrame, table_heading: str, all_da
             if c_idx >= len(df_data.columns):
                 continue
             value = str(df_data.iat[r_idx, c_idx]).strip()
-            cleaned_val = None if value.lower() in ['', '-', 'nan'] else value
+            if value == '0':
+                cleaned_val = 0
+            elif value.lower() in ['', '-', 'nan']:
+                cleaned_val = None
+            else:
+                cleaned_val = value
             header_tuple = (table_heading_clean, year_label, category)
             all_data.append({'Header': header_tuple, 'Value': cleaned_val})
             rows_added += 1
@@ -651,7 +666,12 @@ def process_and_save_to_excel(merged_tables, output_filename="master_output.xlsx
                     if not key_label or key_label.lower() in ['-', 'nan']:
                         continue
                     val_str = str(val).strip()
-                    cleaned_val = None if pd.isna(val) or val_str.lower() in ['', '-', 'nan'] else val_str
+                    if val_str == '0':
+                        cleaned_val = 0
+                    elif pd.isna(val) or val_str.lower() in ['', '-', 'nan']:
+                        cleaned_val = None
+                    else:
+                        cleaned_val = val_str
                     header_tuple = (table_heading_clean, key_label, '')  # third level blank
                     all_data.append({'Header': header_tuple, 'Value': cleaned_val})
                     rows_processed += 1
@@ -712,7 +732,12 @@ def process_and_save_to_excel(merged_tables, output_filename="master_output.xlsx
             for _, row in df_melted.iterrows():
                 raw_val = row['Value']
                 val_str = str(raw_val).strip()
-                cleaned_val = None if pd.isna(raw_val) or val_str.lower() in ['', '-', 'nan'] else raw_val
+                if val_str == '0':
+                    cleaned_val = 0
+                elif pd.isna(raw_val) or val_str.lower() in ['', '-', 'nan']:
+                    cleaned_val = None
+                else:
+                    cleaned_val = raw_val
                 table_heading_clean = str(table_heading).replace('\n', ' ').strip()
                 row_category_clean = str(row[id_col_name]).replace('\n', ' ').strip()
                 col_category_clean = str(row['ColumnHeader']).replace('\n', ' ').strip()
@@ -791,17 +816,233 @@ def process_and_save_to_excel(merged_tables, output_filename="master_output.xlsx
         import traceback
         traceback.print_exc()
 
+# === Multi-PDF Aggregation Utilities (Folder Mode) ===
+
+def extract_pdf_to_records(pdf_path: str, debug: bool=False) -> List[Dict]:
+    """Extract one PDF and return list of {'Header': tuple, 'Value': value} records.
+    This reuses the transformation logic of process_and_save_to_excel but stops before pivoting.
+    """
+    merged_tables = extract_and_group_tables(pdf_path, debug=debug)
+    if not merged_tables:
+        return []
+    records: List[Dict] = []
+    # Minimal reimplementation: replicate internal logic but simpler (no wide pivot, no de-dupe across tables here)
+    for table_heading, df in merged_tables.items():
+        try:
+            if df.shape[1] < 2 or df.shape[0] < 2:
+                continue
+            header_row_index, data_start_index, new_header = find_header_and_data_start(df)
+            lowered_headers = [str(h).lower() for h in new_header]
+            contains_qualification = any("qualification" in h for h in lowered_headers)
+            contains_designation = any("designation" in h for h in lowered_headers)
+            contains_gender = any(h == "gender" for h in lowered_headers)
+
+            # Employee roster table -> gender aggregation only
+            if contains_qualification and contains_designation:
+                if data_start_index >= len(df):
+                    continue
+                df_data = df.iloc[data_start_index:].copy()
+                if len(new_header) != len(df_data.columns):
+                    new_header = df_data.columns.tolist()
+                # Clean duplicate headers
+                seen_headers = {}
+                clean_headers = []
+                for h in new_header:
+                    if h in seen_headers:
+                        seen_headers[h] += 1
+                        clean_headers.append(f"{h}_{seen_headers[h]}")
+                    else:
+                        seen_headers[h] = 0
+                        clean_headers.append(h)
+                df_data.columns = clean_headers
+                def find_col(target):
+                    for c in df_data.columns:
+                        if str(c).strip().lower() == target:
+                            return c
+                    return None
+                gender_col = find_col('gender') if contains_gender else None
+                if gender_col:
+                    gender_series = (df_data[gender_col].astype(str).str.replace('\n', ' ', regex=False).str.strip())
+                    gender_series = gender_series[gender_series.str.len() > 0]
+                    for gender, count in gender_series.value_counts(dropna=True).items():
+                        header_tuple = (table_heading, f"Number of {gender}", '')
+                        records.append({'Header': header_tuple, 'Value': int(count)})
+                continue
+
+            if contains_qualification:
+                continue
+
+            if data_start_index >= len(df):
+                continue
+
+            # 2-col adjustment
+            if df.shape[1] == 2 and data_start_index > 0:
+                data_start_index = 0
+            df_data = df.iloc[data_start_index:].copy()
+
+            # Combined Ph.D special case
+            if 'ph.d (student pursuing doctoral program' in str(new_header[0]).lower() and df_data.shape[1] >= 3:
+                processed_ok = process_combined_phd_table(df_data, table_heading, records, debug=debug)
+                if processed_ok:
+                    continue
+
+            if df_data.empty:
+                continue
+            if len(new_header) != len(df_data.columns):
+                new_header = df_data.columns.tolist()
+            seen_headers = {}
+            clean_headers = []
+            for h in new_header:
+                if h in seen_headers:
+                    seen_headers[h] += 1
+                    clean_headers.append(f"{h}_{seen_headers[h]}")
+                else:
+                    seen_headers[h] = 0
+                    clean_headers.append(h)
+            df_data.columns = clean_headers
+
+            # Key-value 2-column
+            if len(df_data.columns) == 2:
+                col_key, col_val = df_data.columns.tolist()
+                for _, r in df_data.iterrows():
+                    key_label = str(r[col_key]).replace('\n', ' ').strip()
+                    if not key_label or key_label.lower() in ['-','nan']:
+                        continue
+                    val = r[col_val]
+                    val_str = str(val).strip()
+                    if val_str == '0':
+                        cleaned_val = 0
+                    elif pd.isna(val) or val_str.lower() in ['', '-', 'nan']:
+                        cleaned_val = None
+                    else:
+                        cleaned_val = val_str
+                    header_tuple = (table_heading, key_label, '')
+                    records.append({'Header': header_tuple, 'Value': cleaned_val})
+                continue
+
+            # Pivot (repeating Academic Year)
+            if clean_headers.count('Academic Year') > 1 or any(h.startswith('Academic Year_') for h in clean_headers):
+                recs = process_pivot_table(df_data, clean_headers, table_heading, debug=False)
+                records.extend(recs)
+                continue
+
+            id_col = clean_headers[0]
+            melted = df_data.melt(id_vars=[id_col], var_name='ColumnHeader', value_name='Value')
+            for _, row in melted.iterrows():
+                raw_val = row['Value']
+                val_str = str(raw_val).strip()
+                if val_str == '0':
+                    cleaned_val = 0
+                elif pd.isna(raw_val) or val_str.lower() in ['', '-', 'nan']:
+                    cleaned_val = None
+                else:
+                    cleaned_val = raw_val
+                row_cat = str(row[id_col]).replace('\n', ' ').strip()
+                col_cat = str(row['ColumnHeader']).replace('\n', ' ').strip()
+                header_tuple = (table_heading, col_cat, row_cat)
+                records.append({'Header': header_tuple, 'Value': cleaned_val})
+        except Exception:
+            # Skip table on any unexpected error in folder mode to keep pipeline robust
+            continue
+    return records
+
+def _normalize_header_drop_table(header_tuple: Tuple) -> Tuple[str, str]:
+    """Drop the first element (table name) and reduce to (Main, Sub) tuple.
+    If only one element after dropping, second level is blank.
+    """
+    if not header_tuple:
+        return ("Unknown", "")
+    # remove table heading
+    parts = list(header_tuple)[1:]
+    if not parts:
+        return ("Unknown", "")
+    if len(parts) == 1:
+        return (parts[0], "")
+    return (parts[0], parts[1])
+
+def process_folder(input_folder: str, output_filename: str="master_output.xlsx", debug: bool=False):
+    """Process all PDFs in a folder and aggregate into a single master_output.xlsx.
+    - Ignores table names: columns defined purely by (Metric, Category)
+    - Each PDF becomes one row in the Excel sheet (index = PDF filename)
+    - Matching headings across PDFs share the same column; new headings create new columns.
+    """
+    if not os.path.isdir(input_folder):
+        print(f"Input folder '{input_folder}' not found.")
+        return
+    pdf_files = [f for f in os.listdir(input_folder) if f.lower().endswith('.pdf')]
+    if not pdf_files:
+        print(f"No PDF files found in '{input_folder}'.")
+        return
+    pdf_files.sort()
+    print(f"Found {len(pdf_files)} PDF(s) in folder '{input_folder}'.")
+    global_columns: List[Tuple[str,str]] = []
+    row_data: List[Dict] = []
+    for pdf_name in pdf_files:
+        pdf_path = os.path.join(input_folder, pdf_name)
+        print(f"\n--- Processing PDF: {pdf_name} ---")
+        recs = extract_pdf_to_records(pdf_path, debug=debug)
+        normalized_map: Dict[Tuple[str,str], object] = {}
+        for rec in recs:
+            norm = _normalize_header_drop_table(rec['Header'])
+            value = rec['Value']
+            if norm not in normalized_map:
+                normalized_map[norm] = value
+            else:
+                # Merge rule: keep first non-null; if existing is None and new is not None, replace
+                if (normalized_map[norm] is None) and (value is not None):
+                    normalized_map[norm] = value
+            if norm not in global_columns:
+                global_columns.append(norm)
+        row_data.append({'__pdf__': pdf_name, '__map__': normalized_map})
+
+    # Build DataFrame (MultiIndex columns)
+    multi_index = pd.MultiIndex.from_tuples(global_columns, names=['Heading','SubHeading'])
+    matrix = []
+    idx = []
+    for rd in row_data:
+        row_values = [rd['__map__'].get(col, None) for col in global_columns]
+        matrix.append(row_values)
+        idx.append(rd['__pdf__'])
+    wide_df = pd.DataFrame(matrix, columns=multi_index, index=idx)
+
+    try:
+        with pd.ExcelWriter(output_filename, engine='openpyxl') as writer:
+            wide_df.to_excel(writer, sheet_name='Sheet1')
+            ws = writer.sheets['Sheet1']
+            # Autosize
+            for col_idx in range(1, ws.max_column + 1):
+                col_letter = get_column_letter(col_idx)
+                max_len = 0
+                for cell in ws[col_letter]:
+                    try:
+                        if cell.value is not None:
+                            max_len = max(max_len, len(str(cell.value)))
+                    except:
+                        pass
+                ws.column_dimensions[col_letter].width = min(max_len + 2, 50)
+        print(f"\n✅ Aggregated {len(pdf_files)} PDFs into '{output_filename}' with {len(global_columns)} unified columns.")
+    except Exception as e:
+        print(f"Failed to write aggregated Excel: {e}")
+
 # --- Main ---
 
-def main(debug=False):
-    """Main function to run the PDF table extraction and processing."""
-    pdf_path = "iit_delhi_data.pdf"
+def main(debug=False, input_path: Optional[str]=None):
+    """Entry point supporting two modes:
+    - Folder mode: if 'input files' (default) or provided input_path is a directory, process all PDFs and aggregate.
+    - Single PDF mode: fallback to original behavior for a lone PDF file.
+    """
+    folder_candidate = input_path or 'input files'
+    if os.path.isdir(folder_candidate):
+        print(f"Running in multi-PDF aggregation mode for folder: {folder_candidate}")
+        process_folder(folder_candidate, output_filename="master_output.xlsx", debug=debug)
+        return
+    # Single PDF fallback
+    pdf_path = input_path or 'iit_delhi_data.pdf'
     if not os.path.exists(pdf_path):
-        print(f"Error: PDF file not found at '{pdf_path}'."); return
-    
-    print("\nStarting table extraction and grouping...")
+        print(f"Error: PDF file not found at '{pdf_path}'.")
+        return
+    print("\nStarting table extraction and grouping (single PDF mode)...")
     merged_tables = extract_and_group_tables(pdf_path, debug=debug)
-    
     if merged_tables:
         save_raw_tables_for_debug(merged_tables)
         process_and_save_to_excel(merged_tables, output_filename="master_output.xlsx", debug=debug)
@@ -809,4 +1050,5 @@ def main(debug=False):
         print("No tables were extracted from the PDF.")
 
 if __name__ == "__main__":
-    main(debug=True)  # Set to False for less verbose output with extreme debugging
+    # By default try folder mode; set debug=False for cleaner output when running on many PDFs
+    main(debug=False)
