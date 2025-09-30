@@ -10,6 +10,47 @@ import re
 import fitz  # PyMuPDF
 from typing import Optional, Tuple, List, Dict
 from openpyxl.utils import get_column_letter
+import logging
+from datetime import datetime
+
+# Setup logging to capture only our script's output, not library debug info
+log_filename = f"pdf_extraction_log_{datetime.now().strftime('%Y%m%d_%H%M%S')}.txt"
+
+# Set up our custom logger
+logger = logging.getLogger('pdf_extractor')
+logger.setLevel(logging.INFO)
+
+# Create formatter
+formatter = logging.Formatter('%(asctime)s - %(levelname)s - %(message)s')
+
+# File handler for our log
+file_handler = logging.FileHandler(log_filename, encoding='utf-8')
+file_handler.setLevel(logging.INFO)
+file_handler.setFormatter(formatter)
+
+# Console handler
+console_handler = logging.StreamHandler()
+console_handler.setLevel(logging.INFO)
+console_handler.setFormatter(formatter)
+
+# Add handlers to our logger
+logger.addHandler(file_handler)
+logger.addHandler(console_handler)
+
+# Disable debug logging from other libraries
+logging.getLogger('camelot').setLevel(logging.WARNING)
+logging.getLogger('pdfminer').setLevel(logging.WARNING)
+logging.getLogger('fitz').setLevel(logging.WARNING)
+logging.getLogger('pypdf').setLevel(logging.WARNING)
+
+def log_print(*args, **kwargs):
+    """Custom print function that logs to both console and file"""
+    message = ' '.join(str(arg) for arg in args)
+    logger.info(message)
+    # Also print to console normally
+    print(message)
+
+# Don't replace the built-in print globally, use log_print where needed
 
 # --- Helper Functions ---
 
@@ -64,11 +105,11 @@ def extract_and_group_tables(pdf_path, pages='all', min_rows=1, min_cols=1, debu
     try:
         if not os.path.exists(pdf_path):
             raise FileNotFoundError(f"PDF file not found: {pdf_path}")
-        print(f"Extracting tables from: {pdf_path} using Camelot...")
+        log_print(f"Extracting tables from: {pdf_path} using Camelot...")
         tables = camelot.read_pdf(pdf_path, pages=pages, flavor='lattice', line_scale=40)
         if not tables:
-            print("No tables found by Camelot."); return {}
-        print(f"Found {len(tables)} tables. Filtering and grouping...")
+            log_print("No tables found by Camelot."); return {}
+        log_print(f"Found {len(tables)} tables. Filtering and grouping...")
         filtered_tables = [t for t in tables if len(t.df) >= min_rows and len(t.df.columns) >= min_cols]
 
         def safe_bbox(t):
@@ -84,7 +125,7 @@ def extract_and_group_tables(pdf_path, pages='all', min_rows=1, min_cols=1, debu
             bbox = safe_bbox(t)
             heading = _find_heading_above(page, bbox, band_px=140)
             t.heading = heading
-            if debug: print(f"\n[Table {idx}] Page {current_page}, BBox={bbox}\n  Detected heading: {heading if heading else 'None'}")
+            if debug: log_print(f"\n[Table {idx}] Page {current_page}, BBox={bbox}\n  Detected heading: {heading if heading else 'None'}")
             if groups:
                 last_group = groups[-1]
                 last_table_in_group = last_group[-1]
@@ -106,24 +147,24 @@ def extract_and_group_tables(pdf_path, pages='all', min_rows=1, min_cols=1, debu
                 key = f"{original_key}_{counter}"; counter += 1
             final_tables[key] = merged_df
         doc.close()
-        for h, d in final_tables.items(): print(f"\nGroup: '{h}' -> Rows: {len(d)}, Cols: {len(d.columns)}")
+        for h, d in final_tables.items(): log_print(f"\nGroup: '{h}' -> Rows: {len(d)}, Cols: {len(d.columns)}")
         return final_tables
     except Exception as e:
-        print(f"Error extracting tables: {str(e)}"); return {}
+        log_print(f"Error extracting tables: {str(e)}"); return {}
 
 # --- Function to Save Raw Tables for Debugging ---
 
 def save_raw_tables_for_debug(tables_dict, output_filename="debug_raw_tables.xlsx"):
     """Saves each extracted DataFrame to a separate sheet in an Excel file for inspection."""
-    print(f"\nSaving raw tables for debugging to '{output_filename}'...")
+    log_print(f"\nSaving raw tables for debugging to '{output_filename}'...")
     try:
         with pd.ExcelWriter(output_filename, engine='openpyxl') as writer:
             for table_name, df in tables_dict.items():
                 safe_sheet_name = re.sub(r'[\\/*?:"<>|]', "", table_name)[:31]
                 df.to_excel(writer, sheet_name=safe_sheet_name, index=False, header=False)
-        print("✅ Debug file saved successfully.")
+        log_print("✅ Debug file saved successfully.")
     except Exception as e:
-        print(f"❌ Could not save debug file: {e}")
+        log_print(f"❌ Could not save debug file: {e}")
 
 # --- ADVANCED HEADER ANALYSIS FUNCTION ---
 
@@ -779,18 +820,47 @@ def extract_pdf_to_records(pdf_path: str, debug: bool=False) -> List[Dict]:
     """Extract one PDF and return list of {'Header': tuple, 'Value': value} records.
     This reuses the transformation logic of process_and_save_to_excel but stops before pivoting.
     Only processes tables with "Annual Capital Expenditure" or "Annual Operational Expenditure" in heading.
+    Enhanced with year detection to improve data mapping.
     """
+    import re
+    
     merged_tables = extract_and_group_tables(pdf_path, debug=debug)
     if not merged_tables:
         return []
+        
     records: List[Dict] = []
+    
+    # Year pattern to help identify academic years
+    year_pattern = re.compile(r'(20\d{2}-\d{2}|20\d{2}-20\d{2})')
+    
+    # Debug information
+    if debug:
+        print(f"Processing {len(merged_tables)} tables for records extraction")
+    
     # Minimal reimplementation: replicate internal logic but simpler (no wide pivot, no de-dupe across tables here)
     for table_heading, df in merged_tables.items():
         # Filter: only process tables with expenditure keywords in table data
         table_content = df.astype(str).values.flatten()
         table_text = ' '.join(table_content).lower()
-        if not ("annual capital expenditure" in table_text or "annual operational expenditure" in table_text):
+        
+        is_expenditure_table = ("annual capital expenditure" in table_text or 
+                               "annual operational expenditure" in table_text or
+                               "library" in table_text or "equipment" in table_text or 
+                               "engineering workshop" in table_text or "salary" in table_text or
+                               "seminars" in table_text)
+        
+        if not is_expenditure_table:
+            if debug:
+                print(f"Skipping non-expenditure table: {table_heading}")
             continue
+            
+        if debug:
+            print(f"Processing potential expenditure table: {table_heading}")
+            
+        # Find any years mentioned in the table
+        years_in_table = year_pattern.findall(table_text)
+        if debug and years_in_table:
+            print(f"  Found years in table: {years_in_table}")
             
         try:
             if df.shape[1] < 2 or df.shape[0] < 2:
@@ -890,21 +960,80 @@ def extract_pdf_to_records(pdf_path: str, debug: bool=False) -> List[Dict]:
                 records.extend(recs)
                 continue
 
+            # Check if any column header contains year patterns
+            year_columns = []
+            for header in clean_headers:
+                if year_pattern.search(str(header)):
+                    year_columns.append(header)
+            
+            if year_columns and debug:
+                print(f"  Found column headers with years: {year_columns}")
+            
             id_col = clean_headers[0]
-            melted = df_data.melt(id_vars=[id_col], var_name='ColumnHeader', value_name='Value')
-            for _, row in melted.iterrows():
-                raw_val = row['Value']
-                val_str = str(raw_val).strip()
-                if val_str == '0':
-                    cleaned_val = 0
-                elif pd.isna(raw_val) or val_str.lower() in ['', '-', 'nan']:
-                    cleaned_val = None
-                else:
-                    cleaned_val = raw_val
-                row_cat = str(row[id_col]).replace('\n', ' ').strip()
-                col_cat = str(row['ColumnHeader']).replace('\n', ' ').strip()
-                header_tuple = (table_heading, col_cat, row_cat)
-                records.append({'Header': header_tuple, 'Value': cleaned_val})
+            
+            # Detect if we have a multi-year table with years in columns
+            has_year_columns = len(year_columns) > 0
+            
+            # Process differently based on table structure
+            if has_year_columns:
+                # Handle table with years in columns - don't melt year columns together
+                for year_col in year_columns:
+                    year_match = year_pattern.search(str(year_col))
+                    if year_match:
+                        year_value = year_match.group(0)
+                        for _, row in df_data.iterrows():
+                            category = str(row[id_col]).replace('\n', ' ').strip()
+                            if not category or category.lower() in ['-', 'nan', 'none']:
+                                continue
+                                
+                            raw_val = row.get(year_col)
+                            val_str = str(raw_val).strip()
+                            if val_str == '0':
+                                cleaned_val = 0
+                            elif pd.isna(raw_val) or val_str.lower() in ['', '-', 'nan', 'none']:
+                                cleaned_val = None
+                            else:
+                                cleaned_val = raw_val
+                                
+                            # Create header with year embedded in metric
+                            metric = str(year_col).replace(year_value, '').strip()
+                            if not metric:  # If year was the entire column header
+                                metric = f"Value for {year_value}"
+                                
+                            header_tuple = (table_heading, f"{metric} ({year_value})", category)
+                            records.append({'Header': header_tuple, 'Value': cleaned_val})
+            else:
+                # Standard approach for tables without year columns
+                melted = df_data.melt(id_vars=[id_col], var_name='ColumnHeader', value_name='Value')
+                for _, row in melted.iterrows():
+                    raw_val = row['Value']
+                    val_str = str(raw_val).strip()
+                    if val_str == '0':
+                        cleaned_val = 0
+                    elif pd.isna(raw_val) or val_str.lower() in ['', '-', 'nan']:
+                        cleaned_val = None
+                    else:
+                        cleaned_val = raw_val
+                    row_cat = str(row[id_col]).replace('\n', ' ').strip()
+                    col_cat = str(row['ColumnHeader']).replace('\n', ' ').strip()
+                    
+                    # Check for year in row category or column category
+                    year_in_row = year_pattern.search(row_cat)
+                    year_in_col = year_pattern.search(col_cat)
+                    
+                    # Adjust header tuple to include year information
+                    if year_in_row:
+                        year_value = year_in_row.group(0)
+                        row_cat = row_cat.replace(year_value, '').strip()
+                        header_tuple = (table_heading, f"{col_cat} ({year_value})", row_cat)
+                    elif year_in_col:
+                        year_value = year_in_col.group(0)
+                        col_cat = col_cat.replace(year_value, '').strip()
+                        header_tuple = (table_heading, f"{col_cat} ({year_value})", row_cat)
+                    else:
+                        header_tuple = (table_heading, col_cat, row_cat)
+                        
+                    records.append({'Header': header_tuple, 'Value': cleaned_val})
         except Exception:
             # Skip table on any unexpected error in folder mode to keep pipeline robust
             continue
@@ -927,6 +1056,8 @@ def _normalize_header_drop_table(header_tuple: Tuple) -> Tuple[str, str]:
 def append_to_csv(pdf_records: List[Dict], pdf_filename: str, csv_filename: str = "out_format_new.csv"):
     """Append extracted data to CSV following the specified field mapping."""
     import csv
+    import re
+    from datetime import datetime
     
     # Define the CSV column headers and their corresponding data mapping
     csv_columns = [
@@ -948,113 +1079,348 @@ def append_to_csv(pdf_records: List[Dict], pdf_filename: str, csv_filename: str 
         "Seminars/Conferences/Workshops (2021-22)"
     ]
     
-    # Create data mapping from extracted records
+        # Create data mapping from extracted records
     data_map = {}
-    print(f"\nProcessing {len(pdf_records)} records for CSV mapping...")
+    debug_file = f"debug_{datetime.now().strftime('%Y%m%d_%H%M%S')}.txt"
     
-    # First, let's see what records we have
-    print("Sample records:")
-    for i, rec in enumerate(pdf_records[:5]):
-        print(f"  Record {i}: {rec}")
-    
-    for rec in pdf_records:
-        header_tuple = rec['Header']
-        value = rec['Value']
+    with open(debug_file, "w", encoding="utf-8") as df:
+        df.write(f"===== Processing {len(pdf_records)} records for CSV mapping =====\n\n")
+        df.write(f"PDF Filename: {pdf_filename}\n\n")
+        df.write(f"Script Version: Enhanced mapping with precise context v2.0\n\n")
         
-        # Check if record contains expenditure data by looking at the data content
-        if len(header_tuple) >= 3:
-            category = str(header_tuple[2]).strip().lower()
-            metric = str(header_tuple[1]).strip().lower()
+        # First, let's see what records we have
+        df.write("Sample records:\n")
+        for i, rec in enumerate(pdf_records[:10]):
+            df.write(f"  Record {i}: {rec}\n")
             
-            # Look for expenditure keywords in the data content
-            full_content = f"{category} {metric}".lower()
-            
-            print(f"Checking record: {header_tuple} = {value}")
-            print(f"  Content to check: '{full_content}'")
-            
-            is_capital_data = ("annual capital expenditure" in full_content or 
-                             "library" in category or "equipment" in category or 
-                             ("workshop" in category and "engineering" in category) or "studio" in category or
-                             ("capital" in category and "asset" in category))
-            
-            is_operational_data = ("annual operational expenditure" in full_content or
-                                 "salaries" in category or "salary" in category or
-                                 ("maintenance" in category and "infrastructure" in category) or
-                                 ("seminar" in category or "conference" in category) or
-                                 ("workshop" in category and ("seminar" in category or "conference" in category)))
-            
-            print(f"  Is Capital Data: {is_capital_data}, Is Operational Data: {is_operational_data}")
-            
-            if not (is_capital_data or is_operational_data):
-                print(f"  Skipping - not expenditure data")
-                continue
-            
-            print(f"Processing expenditure record: {header_tuple} = {value}")
-            print(f"Data type: {'Capital' if is_capital_data else 'Operational'}")
+        # Add summary of expenditure keywords we're looking for
+        df.write("\nMapping rules:\n")
+        df.write("  Capital expenditure keywords: 'annual capital expenditure', 'library expenditure', 'laboratory equipment', etc.\n")
+        df.write("  Operational expenditure keywords: 'annual operational expenditure', 'salary expenditure', etc.\n")
+        df.write("  Excluded patterns: 'median salary', 'placed graduates', etc.\n\n")        # Year pattern for more robust extraction
+        year_pattern = re.compile(r'(20\d{2}-\d{2}|20\d{2}-20\d{2})')
         
-        # Extract metric and year information
-        if len(header_tuple) >= 2:
-            metric = str(header_tuple[1]).strip()
-            category = str(header_tuple[2]).strip() if len(header_tuple) > 2 else ""
+        for rec in pdf_records:
+            header_tuple = rec['Header']
+            value = rec['Value']
             
-            # Combine metric and category for better matching
-            full_text = f"{metric} {category}".lower()
-            
-            # Extract year from the text
-            year_found = None
-            for year in ["2023-24", "2022-23", "2021-22"]:
-                if year in full_text:
-                    year_found = year
-                    break
-            
-            if not year_found:
+            if value is None or str(value).strip() == '':
                 continue
                 
-            # Map to CSV columns based on data content
+            # Convert header tuple parts to strings and clean
+            table_heading = str(header_tuple[0]).strip().lower() if len(header_tuple) > 0 else ""
+            metric = str(header_tuple[1]).strip().lower() if len(header_tuple) > 1 else ""
+            category = str(header_tuple[2]).strip().lower() if len(header_tuple) > 2 else ""
+            
+            # Special case handling for complex headers with expenditure information
+            capital_asset_pattern = re.compile(r'other expenditure on creation of capital assets.*\(for setting up|excluding.*land', re.IGNORECASE)
+            
+            # Check if any part of the header contains the complex pattern
+            complex_capital_asset = False
+            for part in header_tuple:
+                if isinstance(part, str) and capital_asset_pattern.search(part.lower()):
+                    complex_capital_asset = True
+                    df.write(f"  Found complex capital asset pattern in header\n")
+                    break
+            
+            # Combine all text for better keyword detection
+            full_content = f"{table_heading} {metric} {category}".lower()
+            df.write(f"\nProcessing record: {header_tuple} = {value}\n")
+            df.write(f"  Combined content: '{full_content}'\n")
+            
+            # If complex capital asset pattern was detected, add a flag
+            if complex_capital_asset:
+                df.write(f"  SPECIAL CASE: Complex capital asset header detected\n")
+                
+            # Special case for library-related fields
+            library_pattern = re.compile(r'library\s*\(\s*books', re.IGNORECASE)
+            is_library_record = False
+            is_studio_record = False
+            
+            # Check if any part of the header contains the library pattern
+            for part in header_tuple:
+                if isinstance(part, str) and library_pattern.search(part.lower()):
+                    is_library_record = True
+                    df.write(f"  SPECIAL CASE: Library with books/journals detected\n")
+                    break
+                    
+            # Also check if any part starts with "Library"
+            if not is_library_record:
+                for part in header_tuple:
+                    if isinstance(part, str) and part.lower().strip().startswith("library"):
+                        is_library_record = True
+                        
+            # Check if any part is "Studios"
+            for part in header_tuple:
+                if isinstance(part, str) and part.lower().strip() == "studios":
+                    is_studio_record = True
+                    df.write(f"  SPECIAL CASE: Studios detected as capital expenditure\n")
+                    break
+            
+            # Check if the record is expenditure data - use more specific context-aware checks
+            # First, filter out non-expenditure related data
+            if "median salary" in full_content:
+                df.write("  Skipping - median salary is not institutional expenditure\n")
+                continue
+                
+            if "placed graduates" in full_content:
+                df.write("  Skipping - placement information is not expenditure data\n")
+                continue
+                
+            # Check for specific expenditure keywords with better context
+            is_capital_data = False
+            is_operational_data = False
+            
+            # Capital expenditure checks with context
+            if "annual capital expenditure" in full_content:
+                is_capital_data = True
+            elif "library expenditure" in full_content or "expenditure on library" in full_content:
+                is_capital_data = True
+            elif is_library_record:  # Use our special case detection
+                is_capital_data = True
+                df.write("  Identified as library expenditure data based on header pattern\n")
+            elif is_studio_record or "studios" in full_content:  # Use our special case detection for studios
+                is_capital_data = True
+                df.write("  Identified as studio expenditure data\n")
+            elif ("equipment" in full_content and "laborator" in full_content) or "laboratory equipment" in full_content:
+                is_capital_data = True
+            elif "engineering workshop" in full_content and not "seminar" in full_content:
+                is_capital_data = True
+            elif "studio" in full_content and not any(non_exp in full_content for non_exp in ["student", "graduating", "placed"]):
+                is_capital_data = True
+            elif "capital asset" in full_content and not "other" in full_content:
+                is_capital_data = True
+            
+            # First check for specific header patterns that should always be recognized
+            is_salary_record = False
+            is_seminar_record = False
+            is_maintenance_record = False
+            is_studio_record = False
+            
+            # Check if this is a salary record by its header
+            if "salaries (teaching and non teaching staff)" in full_content:
+                is_salary_record = True
+                is_operational_data = True
+                df.write("  Identified as salary data based on header pattern\n")
+            
+            # Check if this is a seminar/conference record by its header
+            elif "seminars/conferences/workshops" in full_content:
+                is_seminar_record = True
+                is_operational_data = True
+                df.write("  Identified as seminar/conference data based on header pattern\n")
+                
+            # Operational expenditure checks with context
+            elif "annual operational expenditure" in full_content:
+                is_operational_data = True
+            elif ("salary expenditure" in full_content or 
+                  ("salary" in full_content and "expenditure" in full_content) or
+                  ("salaries" in full_content and "teaching" in full_content and "non teaching" in full_content)):
+                # Exclude median salary of placed graduates
+                if not any(excl in full_content for excl in ["median", "placed", "graduate"]):
+                    is_salary_record = True
+                    is_operational_data = True
+            elif "maintenance" in full_content and "infrastructure" in full_content:
+                is_maintenance_record = True
+                is_operational_data = True
+            elif ("seminar/conference/workshop" in full_content or
+                  ("seminar" in full_content or "conference" in full_content or "workshop" in full_content) and "expenditure" in full_content):
+                is_seminar_record = True
+                is_operational_data = True
+                
+            # Handle special case for "Other expenditure" which needs specific categorization
+            if "other expenditure" in full_content:
+                if "capital" in full_content or "asset" in full_content:
+                    is_capital_data = True
+                    is_operational_data = False
+            
+            df.write(f"  Is Capital: {is_capital_data}, Is Operational: {is_operational_data}\n")
+            
+            if not (is_capital_data or is_operational_data):
+                df.write("  Skipping - not expenditure data\n")
+                continue
+            
+            # Extract year from any part of the header tuple
+            # First, try direct year pattern match
+            year_match = year_pattern.search(full_content)
+            year_found = year_match.group(0) if year_match else None
+            
+            # If no direct year match, try to infer from context or related records
+            if not year_found:
+                for year in ["2023-24", "2022-23", "2021-22"]:
+                    # Check if there are indicators of the year in nearby context
+                    for related_rec in pdf_records:
+                        related_header = related_rec['Header']
+                        if len(related_header) >= 2:
+                            related_content = " ".join([str(part).strip().lower() for part in related_header])
+                            if year in related_content and any(kw in full_content for kw in [
+                                metric, category, table_heading
+                            ]):
+                                year_found = year
+                                df.write(f"  Year inferred from related record: {year}\n")
+                                break
+                    if year_found:
+                        break
+            
+            # Still no year? Try to infer from current/previous/next academic year context
+            if not year_found:
+                current_year = datetime.now().year
+                if f"current" in full_content or f"{current_year}" in full_content:
+                    year_found = "2023-24"  # Assume current is 2023-24
+                    df.write(f"  Year inferred from 'current year' context: {year_found}\n")
+                elif f"previous" in full_content or f"{current_year-1}" in full_content:
+                    year_found = "2022-23"  # Assume previous is 2022-23
+                    df.write(f"  Year inferred from 'previous year' context: {year_found}\n")
+                elif f"before" in full_content or f"{current_year-2}" in full_content:
+                    year_found = "2021-22"  # Assume year before previous is 2021-22
+                    df.write(f"  Year inferred from 'year before previous' context: {year_found}\n")
+            
+            if not year_found:
+                df.write("  No year found, trying to match based on column position\n")
+                # Try to identify the column/row position to guess the year
+                if "3" in metric or "3rd" in metric or "third" in metric:
+                    year_found = "2021-22"
+                elif "2" in metric or "2nd" in metric or "second" in metric:
+                    year_found = "2022-23"
+                elif "1" in metric or "1st" in metric or "first" in metric:
+                    year_found = "2023-24"
+            
+            if not year_found:
+                df.write("  Skipping - could not determine year\n")
+                continue
+                
+            df.write(f"  Year found/inferred: {year_found}\n")
+            
+            # Map to CSV columns based on data content and year with more precise matching
+            mapped = False
+            
             if is_capital_data:
-                # Map capital expenditure fields
-                if "library" in full_text:
-                    data_map[f"Library ({year_found})"] = value
-                    print(f"  Mapped to Library ({year_found}): {value}")
-                elif ("equipment" in full_text and "laborator" in full_text) or ("new equipment" in full_text):
-                    data_map[f"New Equipment for Laboratories ({year_found})"] = value
-                    print(f"  Mapped to New Equipment for Laboratories ({year_found}): {value}")
-                elif ("workshop" in full_text and "engineering" in full_text) or "engineering workshops" in full_text:
-                    data_map[f"Engineering Workshops ({year_found})"] = value
-                    print(f"  Mapped to Engineering Workshops ({year_found}): {value}")
-                elif "studio" in full_text:
-                    data_map[f"Studios ({year_found})"] = value
-                    print(f"  Mapped to Studios ({year_found}): {value}")
-                elif ("other" in full_text and ("capital" in full_text or "asset" in full_text)) or ("other expenditure" in full_text):
-                    data_map[f"Other expenditure on creation of Capital Assets ({year_found})"] = value
-                    print(f"  Mapped to Other expenditure on creation of Capital Assets ({year_found}): {value}")
+                # Map capital expenditure fields with more precise context matching
+                
+                # Library - priority check for our special library record detection
+                if is_library_record:
+                    column_key = f"Library ({year_found})"
+                    data_map[column_key] = value
+                    df.write(f"  MAPPED to {column_key}: {value}\n")
+                    df.write(f"  Mapped based on library header pattern detection\n")
+                    mapped = True
+                # Other library patterns
+                elif ("library expenditure" in full_content or 
+                    "expenditure on library" in full_content or 
+                    "library ( books" in full_content or  # Specifically match "Library ( Books, Journals and e-Resources only)"
+                    category.startswith("library") or     # Match category field starting with "library"
+                    metric.startswith("library") or       # Match metric field starting with "library" 
+                    (("library" in full_content or "libraries" in full_content) and 
+                     ("expenditure" in full_content or "books" in full_content or "journals" in full_content or "e-resources" in full_content) and 
+                     not any(excl in full_content for excl in ["equipment", "lab", "workshop", "studio", "other"]))):
+                    column_key = f"Library ({year_found})"
+                    data_map[column_key] = value
+                    df.write(f"  MAPPED to {column_key}: {value}\n")
+                    mapped = True
+                    
+                # Laboratory equipment
+                elif (("equipment" in full_content and "laborator" in full_content) or 
+                      "laboratory equipment" in full_content or 
+                      ("new equipment" in full_content and not "other" in full_content)):
+                    column_key = f"New Equipment for Laboratories ({year_found})"
+                    data_map[column_key] = value
+                    df.write(f"  MAPPED to {column_key}: {value}\n")
+                    mapped = True
+                    
+                # Engineering Workshops
+                elif ("engineering workshop" in full_content or 
+                      ("workshop" in full_content and "engineering" in full_content) and 
+                      not any(excl in full_content for excl in ["seminar", "conference"])):
+                    column_key = f"Engineering Workshops ({year_found})"
+                    data_map[column_key] = value
+                    df.write(f"  MAPPED to {column_key}: {value}\n")
+                    mapped = True
+                    
+                # Studios - use special case detection or fallback to keyword matching
+                elif is_studio_record or "studio" in full_content or "studios" in full_content:
+                    column_key = f"Studios ({year_found})"
+                    data_map[column_key] = value
+                    df.write(f"  MAPPED to {column_key}: {value}\n")
+                    mapped = True
+                    
+                # Other capital expenditure
+                elif (("other expenditure" in full_content and "capital" in full_content) or
+                      ("creation of capital asset" in full_content) or
+                      ("other" in full_content and "capital asset" in full_content)):
+                    column_key = f"Other expenditure on creation of Capital Assets ({year_found})"
+                    data_map[column_key] = value
+                    df.write(f"  MAPPED to {column_key}: {value}\n")
+                    mapped = True
                         
             elif is_operational_data:
                 # Map operational expenditure fields
-                if "salaries" in full_text or "salary" in full_text:
-                    data_map[f"Salaries ({year_found})"] = value
-                    print(f"  Mapped to Salaries ({year_found}): {value}")
-                elif ("maintenance" in full_text and "infrastructure" in full_text) or ("academic infrastructure" in full_text):
-                    data_map[f"Maintenance of Academic Infrastructure or consumables and other running expenditures ({year_found})"] = value
-                    print(f"  Mapped to Maintenance... ({year_found}): {value}")
-                elif "seminar" in full_text or "conference" in full_text or ("workshop" in full_text and "seminar" in full_text):
-                    data_map[f"Seminars/Conferences/Workshops ({year_found})"] = value
-                    print(f"  Mapped to Seminars/Conferences/Workshops ({year_found}): {value}")
-    
-    # Prepare the row data
-    college_name = pdf_filename.replace('.pdf', '').replace('_', ' ').title()
-    row_data = [college_name]
-    
-    # Add data for each column (skip College Name which is first)
-    for col in csv_columns[1:]:
-        row_data.append(data_map.get(col, ""))
-    
-    print(f"\nMapped data for {college_name}:")
-    for i, col in enumerate(csv_columns):
-        if i == 0:
-            print(f"  {col}: {college_name}")
-        else:
-            print(f"  {col}: {row_data[i] if i < len(row_data) else ''}")
+                
+                # Salaries - prioritize direct header detection
+                if is_salary_record or (("salary expenditure" in full_content or "salaries expenditure" in full_content) or
+                    "salaries (teaching and non teaching staff)" in full_content or
+                    "teaching and non teaching staff" in full_content or
+                    ("teaching staff" in full_content and "non teaching staff" in full_content) or
+                    (("salary" in full_content or "salaries" in full_content) and 
+                     ("expenditure" in full_content or "value" in full_content) and 
+                     not any(excl in full_content for excl in ["median", "placed", "graduate"]))):
+                    column_key = f"Salaries ({year_found})"
+                    data_map[column_key] = value
+                    df.write(f"  MAPPED to {column_key}: {value}\n")
+                    mapped = True
+                    
+                # Maintenance and infrastructure
+                elif (("maintenance" in full_content and "infrastructure" in full_content) or
+                      "academic infrastructure" in full_content or 
+                      "consumable" in full_content and "expenditure" in full_content):
+                    column_key = f"Maintenance of Academic Infrastructure or consumables and other running expenditures ({year_found})"
+                    data_map[column_key] = value
+                    df.write(f"  MAPPED to {column_key}: {value}\n")
+                    mapped = True
+                    
+                # Seminars/Conferences/Workshops - prioritize direct header detection
+                elif (is_seminar_record or 
+                     ((any(term in full_content for term in ["seminar", "conference", "workshop", "seminar/conference/workshop"]) and 
+                       ("expenditure" in full_content or "expenditure on" in full_content or "value" in full_content)) and
+                      not "engineering workshop" in full_content) or
+                      "seminars/conferences/workshops" in full_content):
+                    column_key = f"Seminars/Conferences/Workshops ({year_found})"
+                    data_map[column_key] = value
+                    df.write(f"  MAPPED to {column_key}: {value}\n")
+                    mapped = True
+                    
+            # Handle the specific case mentioned in the user's example - a combined heading with multiple types
+            if not mapped:
+                # Check for complex capital asset pattern
+                if complex_capital_asset or "other expenditure on creation of capital assets" in full_content:
+                    # Different variations of the pattern
+                    if ("(for setting up" in full_content or 
+                        "excluding expenditure on land" in full_content or
+                        ("other" in full_content and "capital" in full_content and "asset" in full_content)):
+                        # This is a combined entry that should go to "Other expenditure on creation of Capital Assets"
+                        column_key = f"Other expenditure on creation of Capital Assets ({year_found})"
+                        data_map[column_key] = value
+                        df.write(f"  MAPPED to {column_key}: {value}\n")
+                        mapped = True
+                        df.write(f"  NOTE: Complex capital asset pattern recognized and properly mapped\n")
+                    
+            if not mapped:
+                df.write(f"  FAILED TO MAP - could not determine appropriate column for content: {full_content}\n")
+                
+        # Prepare the row data
+        college_name = pdf_filename.replace('.pdf', '').replace('_', ' ').title()
+        row_data = [college_name]
+        
+        # Add data for each column (skip College Name which is first)
+        for col in csv_columns[1:]:
+            row_data.append(data_map.get(col, ""))
+        
+        df.write(f"\nFinal mapped data for {college_name}:\n")
+        for i, col in enumerate(csv_columns):
+            if i == 0:
+                df.write(f"  {col}: {college_name}\n")
+            else:
+                df.write(f"  {col}: {row_data[i] if i < len(row_data) else ''}\n")
+        
+        print(f"Processed {pdf_filename} - see {debug_file} for detailed mapping information")
     
     # Create CSV file with headers if it doesn't exist
     if not os.path.exists(csv_filename):
@@ -1072,9 +1438,25 @@ def append_to_csv(pdf_records: List[Dict], pdf_filename: str, csv_filename: str 
         with open(csv_filename, 'a', newline='', encoding='utf-8') as csvfile:
             writer = csv.writer(csvfile)
             writer.writerow(row_data)
-        print(f"Successfully appended data for {college_name} to {csv_filename}")
+        print(f"✅ Successfully appended data for {college_name} to {csv_filename}")
+        
+        # Also save mapping details in debug folder
+        debug_folder = "mapping_debug"
+        if not os.path.exists(debug_folder):
+            os.makedirs(debug_folder)
+        
+        debug_csv = os.path.join(debug_folder, f"{college_name.replace(' ', '_')}_mapping.csv")
+        with open(debug_csv, 'w', newline='', encoding='utf-8') as mapfile:
+            map_writer = csv.writer(mapfile)
+            # Write header
+            map_writer.writerow(["Column", "Value"])
+            # Write college name and all mapped values
+            map_writer.writerow(["College Name", college_name])
+            for col in csv_columns[1:]:
+                map_writer.writerow([col, data_map.get(col, "")])
+        
     except Exception as e:
-        print(f"Error appending to CSV: {e}")
+        print(f"❌ Error appending to CSV: {e}")
 
 def process_folder(input_folder: str, output_filename: str="master_output.xlsx", debug: bool=False):
     """Process all PDFs in a folder and aggregate into a single master_output.xlsx.
@@ -1103,7 +1485,16 @@ def process_folder(input_folder: str, output_filename: str="master_output.xlsx",
     for pdf_name in pdf_files:
         pdf_path = os.path.join(input_folder, pdf_name)
         print(f"\n--- Processing PDF: {pdf_name} ---")
+        
+        # Extract tables and save debug info for each PDF
+        merged_tables = extract_and_group_tables(pdf_path, debug=debug)
+        if merged_tables:
+            save_detailed_debug_info(merged_tables, pdf_path)
+        
         recs = extract_pdf_to_records(pdf_path, debug=debug)
+        
+        # Save records debug info for each PDF
+        save_records_debug(recs, pdf_name)
         
         # Append to CSV file with folder-specific name
         append_to_csv(recs, pdf_name, csv_filename)
@@ -1174,7 +1565,7 @@ def main(debug=False, input_path: Optional[str]=None):
     - Folder mode: if 'input files' (default) or provided input_path is a directory, process all PDFs and aggregate.
     - Single PDF mode: fallback to original behavior for a lone PDF file.
     """
-    folder_candidate = input_path or 'input files'
+    folder_candidate = "NIRF IIT'S"
     if os.path.isdir(folder_candidate):
         print(f"Running in multi-PDF aggregation mode for folder: {folder_candidate}")
         process_folder(folder_candidate, output_filename="master_output.xlsx", debug=debug)
@@ -1189,9 +1580,16 @@ def main(debug=False, input_path: Optional[str]=None):
     if merged_tables:
         save_raw_tables_for_debug(merged_tables)
         
+        # Save detailed debugging information
+        save_detailed_debug_info(merged_tables, pdf_path)
+        
         # Extract records and append to CSV
         recs = extract_pdf_to_records(pdf_path, debug=debug)
         pdf_filename = os.path.basename(pdf_path)
+        
+        # Save records to debug file
+        save_records_debug(recs, pdf_filename)
+        
         # For single PDF, use the PDF name as CSV filename
         single_csv_name = f"{pdf_filename.replace('.pdf', '')}_output.csv"
         append_to_csv(recs, pdf_filename, single_csv_name)
@@ -1200,6 +1598,68 @@ def main(debug=False, input_path: Optional[str]=None):
     else:
         print("No tables were extracted from the PDF.")
 
+def save_detailed_debug_info(merged_tables, pdf_path):
+    """Save detailed debugging information about extracted tables in organized debug folder"""
+    # Create debug folder if it doesn't exist
+    debug_folder = "extracted_tables_debug"
+    if not os.path.exists(debug_folder):
+        os.makedirs(debug_folder)
+    
+    # Get clean PDF filename without extension
+    pdf_name = os.path.splitext(os.path.basename(pdf_path))[0]
+    debug_filename = os.path.join(debug_folder, f"{pdf_name}_extracted_tables.txt")
+    
+    with open(debug_filename, 'w', encoding='utf-8') as f:
+        f.write(f"EXTRACTED TABLE DATA FOR: {pdf_name}\n")
+        f.write(f"Source PDF: {pdf_path}\n")
+        f.write(f"Generated at: {datetime.now()}\n")
+        f.write("="*80 + "\n\n")
+        
+        for table_name, df in merged_tables.items():
+            f.write(f"TABLE: {table_name}\n")
+            f.write(f"Shape: {df.shape} (Rows: {df.shape[0]}, Columns: {df.shape[1]})\n")
+            f.write(f"Column Names: {list(df.columns)}\n")
+            f.write("-" * 60 + "\n")
+            f.write("RAW TABLE DATA:\n")
+            f.write(df.to_string(index=True, max_rows=None, max_cols=None))
+            f.write("\n\n")
+            
+            # Also save as CSV for easier analysis
+            csv_filename = os.path.join(debug_folder, f"{pdf_name}_{table_name.replace(' ', '_').replace('/', '_')}.csv")
+            try:
+                df.to_csv(csv_filename, index=False, encoding='utf-8')
+                f.write(f"Also saved as CSV: {csv_filename}\n")
+            except Exception as e:
+                f.write(f"Failed to save CSV: {e}\n")
+            
+            f.write("\n" + "="*80 + "\n\n")
+    
+    log_print(f"Debug info for {pdf_name} saved to: {debug_filename}")
+
+def save_records_debug(records, pdf_filename):
+    """Save extracted records for debugging in organized debug folder"""
+    # Create debug folder if it doesn't exist
+    debug_folder = "extracted_tables_debug"
+    if not os.path.exists(debug_folder):
+        os.makedirs(debug_folder)
+    
+    pdf_name = os.path.splitext(pdf_filename)[0]
+    records_filename = os.path.join(debug_folder, f"{pdf_name}_processed_records.txt")
+    
+    with open(records_filename, 'w', encoding='utf-8') as f:
+        f.write(f"PROCESSED RECORDS FOR: {pdf_name}\n")
+        f.write(f"Generated at: {datetime.now()}\n")
+        f.write(f"Total Records: {len(records)}\n")
+        f.write("="*80 + "\n\n")
+        
+        for i, record in enumerate(records):
+            f.write(f"Record {i+1}:\n")
+            f.write(f"  Header Tuple: {record.get('Header', 'N/A')}\n")
+            f.write(f"  Value: {record.get('Value', 'N/A')}\n")
+            f.write("-" * 50 + "\n")
+    
+    log_print(f"Processed records for {pdf_name} saved to: {records_filename}")
+
 if __name__ == "__main__":
     # By default try folder mode; set debug=False for cleaner output when running on many PDFs
-    main(debug=False)
+    main(debug=True)  # Changed to True for detailed debugging
