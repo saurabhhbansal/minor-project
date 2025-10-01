@@ -14,19 +14,6 @@ dist/
 build/
 *.egg-info/
 
-# Large data files
-*.csv
-*.xlsx
-*.xls
-*.pdf
-*.zip
-*.rar
-*.7z
-*.tar
-*.gz
-*.mp4
-*.mov
-*.avi
 
 # Jupyter notebook checkpoints
 .ipynb_checkpoints/
