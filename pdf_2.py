@@ -1565,7 +1565,7 @@ def main(debug=False, input_path: Optional[str]=None):
     - Folder mode: if 'input files' (default) or provided input_path is a directory, process all PDFs and aggregate.
     - Single PDF mode: fallback to original behavior for a lone PDF file.
     """
-    folder_candidate = "NIRF IIT'S"
+    folder_candidate = "NIRF IISER's"
     if os.path.isdir(folder_candidate):
         print(f"Running in multi-PDF aggregation mode for folder: {folder_candidate}")
         process_folder(folder_candidate, output_filename="master_output.xlsx", debug=debug)
@@ -1662,4 +1662,4 @@ def save_records_debug(records, pdf_filename):
 
 if __name__ == "__main__":
     # By default try folder mode; set debug=False for cleaner output when running on many PDFs
-    main(debug=True)  # Changed to True for detailed debugging
+    main(debug=False)  # Changed to True for detailed debugging

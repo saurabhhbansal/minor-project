@@ -979,7 +979,7 @@ def main(debug=False, input_path: Optional[str]=None):
     - Folder mode: if 'input files' (default) or provided input_path is a directory, process all PDFs and aggregate.
     - Single PDF mode: fallback to original behavior for a lone PDF file.
     """
-    folder_candidate = input_path or 'input files'
+    folder_candidate = input_path or "NIRF IIT's"
     if os.path.isdir(folder_candidate):
         print(f"Running in multi-PDF aggregation mode for folder: {folder_candidate}")
         process_folder(folder_candidate, output_filename="master_output.xlsx", debug=debug)
