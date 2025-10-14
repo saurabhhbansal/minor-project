@@ -32,3 +32,11 @@ build/
 # OS specific files
 .DS_Store
 Thumbs.db
+ 
+# Office temporary lock files
+~$*.xlsx
+**/~$*.xlsx
+output_folder_2/~$*.xlsx
+
+# Excel outputs (optional):
+# *.xlsx

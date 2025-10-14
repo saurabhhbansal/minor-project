@@ -28,6 +28,61 @@ def _normalize_identifier_text(text: str) -> str:
     if text.startswith("Other expenditure on creation of Capital Assets"): return "Other expenditure on creation of Capital Assets (excluding expenditure on Land and Building)"
     return text
 
+def _is_faculty_token(s: str) -> bool:
+    """Returns True if the string looks like a faculty-related field."""
+    s = str(s or "").lower()
+    tokens = [
+        'srno', 'sr.no', 's.no', 'serial no', 'sno', 'sr no', '#',
+        'name', 'age', 'gender', 'designation', 'qualification',
+        'experience', 'experience (in months)', 'currently working',
+        'joining date', 'date of joining', 'leaving date', 'date of leaving',
+        'association', 'association type', 'department', 'employee id', 'emp id',
+        'faculty id'
+    ]
+    return any(tok in s for tok in tokens)
+
+def _is_faculty_header_tuple(header_tuple: Tuple) -> bool:
+    """Heuristic: decide if a header tuple clearly refers to faculty roster columns."""
+    parts = [str(p) for p in header_tuple if isinstance(p, (str,))]
+    lower_parts = [p.lower() for p in parts]
+
+    def looks_like_date(v: str) -> bool:
+        return bool(re.search(r"\b\d{1,2}[-/]\d{1,2}[-/]\d{2,4}\b", v))
+
+    def looks_like_small_int(v: str) -> bool:
+        return v.isdigit() and 1 <= int(v) <= 200
+
+    def looks_like_name(v: str) -> bool:
+        if any(ch.isdigit() for ch in v):
+            return False
+        tokens = [t for t in re.split(r"\s+", v.strip()) if t]
+        if len(tokens) < 2 or len(tokens) > 4:
+            return False
+        # Allow tokens like 'Abdul', 'Khan', 'Ishrat', 'Bashir', 'Asif'
+        title_like = sum(1 for t in tokens if t[:1].isalpha() and t[:1].isupper())
+        return title_like >= 2
+
+    def is_status_word(v: str) -> bool:
+        v = v.lower().strip()
+        statuses = ['professor', 'assistant professor', 'associate professor', 'regular', 'contract', 'adhoc', 'visiting', 'temporary', 'permanent']
+        return any(s in v for s in statuses)
+
+    # Token-based hits from known faculty column names
+    hits = sum(1 for p in lower_parts if _is_faculty_token(p))
+    if hits >= 2:
+        return True
+
+    # Value-pattern based heuristics catching cases like:
+    # ('Professor', '19'), ('Abdul Gani', '22'), ('30-07-2013', '23'), ('Regular', '33')
+    if any(is_status_word(p) for p in parts):
+        return True
+    if any(looks_like_date(p) for p in parts) and (any(looks_like_name(p) for p in parts) or any(looks_like_small_int(p) for p in parts)):
+        return True
+    if any(looks_like_name(p) for p in parts) and (any(looks_like_small_int(p) for p in parts) or any(is_status_word(p) for p in parts)):
+        return True
+
+    return False
+
 def _to_fitz_y(page, camelot_y: float) -> float:
     return float(page.rect.height) - float(camelot_y)
 
@@ -106,7 +161,8 @@ def find_header_and_data_start(df: pd.DataFrame) -> Tuple[int, int, list]:
             if meaningful > max_meaning: max_meaning, best_idx = meaningful, i
     if best_idx == -1: best_idx = start_offset
     header = [str(h).replace('\n',' ').strip() for h in df.iloc[best_idx]] if best_idx < len(df) else [f"C{i}" for i in range(df.shape[1])]
-    cleaned = [h if h and h.lower() != 'nan' else f"Col_{i}" for i, h in enumerate(header)]
+    # Do not create placeholder columns with the name 'Col_*'; use 'Field_*' instead (1-based index)
+    cleaned = [h if h and h.lower() != 'nan' else f"Field_{i+1}" for i, h in enumerate(header)]
     return best_idx, best_idx + 1, cleaned
 
 # --- Special Table Handlers ---
@@ -200,15 +256,23 @@ def _generate_records_from_df(df: pd.DataFrame, table_heading: str, debug: bool 
         
         # EARLY CHECK: Skip faculty tables by examining raw dataframe content
         df_as_string = df.to_string().lower()
-        
-        # Check if this looks like a faculty table based on raw content
-        faculty_indicators = ['designation', 'qualification', 'experience (in months)', 'currently working', 
-                            'joining date', 'leaving date', 'association type']
+
+        # Expanded indicators to robustly catch faculty rosters across PDFs
+        faculty_indicators = [
+            'faculty', 'designation', 'qualification', 'experience', 'experience (in months)',
+            'currently working', 'joining date', 'date of joining', 'leaving date', 'date of leaving',
+            'association', 'association type', 'department', 'employee id', 'emp id', 'faculty id',
+            'email', 'phone', 'mobile'
+        ]
         faculty_match_count = sum(1 for indicator in faculty_indicators if indicator in df_as_string)
-        
-        # If 3 or more faculty indicators are present, it's almost certainly a faculty table
-        if faculty_match_count >= 3:
-            print(f"⏭️  Skipping Faculty Details table: '{table_heading}' (matched {faculty_match_count} faculty indicators)")
+
+        # If this table strongly resembles faculty data, skip early
+        if faculty_match_count >= 3 or (
+            faculty_match_count >= 2 and df.shape[0] >= 15 and df.shape[1] >= 4
+        ) or (
+            'faculty' in df_as_string and any(k in df_as_string for k in ['designation', 'qualification', 'joining'])
+        ):
+            print(f"⏭️  Skipping Faculty Details table (early content check): '{table_heading}' [matches={faculty_match_count}]")
             return records
         
         if 'ph.d (student pursuing' in df_as_string or 'students graduated' in df_as_string:
@@ -244,15 +308,17 @@ def _generate_records_from_df(df: pd.DataFrame, table_heading: str, debug: bool 
         if data_start_index >= len(df) or df.iloc[data_start_index:].empty: return []
         df_data = df.iloc[data_start_index:].copy()
         
-        # This is the single, definitive check to skip faculty tables
-        # Check for faculty table patterns using the detected headers
+    # This is the single, definitive check to skip faculty tables
+    # Check for faculty table patterns using the detected headers
         header_text = ' '.join([str(h).lower() for h in new_header])
         
         # Multiple detection strategies to catch all faculty table variations
         has_qualification = any("qualification" in str(h).lower() for h in new_header)
         has_designation = any("designation" in str(h).lower() for h in new_header)
         has_name = any("name" in str(h).lower() for h in new_header)
-        has_srno = any("srno" in str(h).lower() or "sr.no" in str(h).lower() or "s.no" in str(h).lower() or str(h).lower() == "col_0" for h in new_header)
+        has_srno = any(
+            s in str(h).lower() for h in new_header for s in ["srno", "sr.no", "s.no", "s no", "serial no", "sno", "sr no", "#", "field_1"]
+        )
         has_age = any("age" in str(h).lower() for h in new_header)
         has_gender = any("gender" in str(h).lower() for h in new_header)
         has_experience = any("experience" in str(h).lower() for h in new_header)
@@ -266,15 +332,21 @@ def _generate_records_from_df(df: pd.DataFrame, table_heading: str, debug: bool 
         is_large_roster = len(df_data) > 50 and has_name
         
         # Faculty table if it has typical faculty roster columns
-        is_faculty_roster = (has_qualification and has_designation) or \
-                           (has_name and has_srno) or \
-                           (has_name and has_designation) or \
-                           (has_name and has_age and has_gender) or \
-                           (has_experience and has_joining) or \
-                           is_faculty_heading or \
-                           is_large_roster
+        is_faculty_roster = (
+            (has_qualification and has_designation)
+            or (has_name and has_srno)
+            or (has_name and has_designation)
+            or (has_name and has_age and has_gender)
+            or (has_experience and has_joining)
+            or (is_faculty_heading and (has_name or has_designation or has_qualification))
+            or is_large_roster
+        )
         
-        if is_faculty_roster:
+        # Extra guard: if majority of headers look faculty-like, skip
+        faculty_header_hits = sum(1 for h in new_header if _is_faculty_token(h))
+        majority_faculty = faculty_header_hits >= max(3, int(0.5 * len(new_header)))
+
+        if is_faculty_roster or majority_faculty:
             print(f"⏭️  Skipping Faculty Details table: '{table_heading}' (headers: {new_header[:5]}...)")
             return records
             
@@ -326,6 +398,9 @@ def process_folder(input_folder: str, output_folder: str, debug: bool=False):
         for rec in all_records:
             if rec.get('Value') is None: continue
             norm = _normalize_header_drop_table(rec['Header'])
+            # Guard: do not include any faculty-like columns in aggregation
+            if _is_faculty_header_tuple(norm):
+                continue
             if norm not in normalized_map: normalized_map[norm] = rec['Value']
             if norm not in global_columns: global_columns.append(norm)
         row_data.append({'_pdf': pdf_name, 'map_': normalized_map})
@@ -338,6 +413,12 @@ def process_folder(input_folder: str, output_folder: str, debug: bool=False):
     
     wide_df = pd.DataFrame(matrix, columns=pd.MultiIndex.from_tuples(global_columns), index=idx)
     cols_to_drop = [col for col in wide_df.columns if col[1] == 'Academic Year' or col[0] == col[1]]
+    # Final safety: drop any columns that match faculty roster patterns
+    faculty_like_cols = [col for col in wide_df.columns if _is_faculty_header_tuple(col)]
+    if faculty_like_cols:
+        if debug:
+            print(f"Dropping {len(faculty_like_cols)} faculty-like column(s) at aggregation stage.")
+        wide_df = wide_df.drop(columns=faculty_like_cols, errors='ignore')
     if cols_to_drop:
         if debug: print(f"Cleaning up {len(cols_to_drop)} irrelevant columns...")
         wide_df = wide_df.drop(columns=cols_to_drop, errors='ignore')
