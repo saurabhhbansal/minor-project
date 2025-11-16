@@ -1,84 +1,77 @@
-NIRF Budget Analysis System
+# **NIRF Budget Analysis System**
 
-A full-stack web application that automates NIRF PDF extraction, data cleaning, CSV generation, Supabase cloud storage, and machine-learning-based capital expenditure prediction for Indian educational institutions.
+A full-stack web application that automates **NIRF PDF extraction**, **data cleaning**, **CSV generation**, **Supabase cloud storage**, and **machine-learning-based capital expenditure prediction** for Indian educational institutions.
 
-This project uses:
+---
 
-React (Vite) for the frontend
+## 🚀 **Tech Stack**
+- **Frontend:** React (Vite)  
+- **Backend:** FastAPI  
+- **Database:** PostgreSQL  
+- **Cloud Storage:** Supabase Storage  
+- **ML Model:** Random Forest  
+- **Custom Extraction:** Supports NIRF **2023 / 2024 / 2025** formats  
 
-FastAPI for the backend
+---
 
-PostgreSQL for storing extracted financial data
+## 📦 **Features**
 
-Supabase Storage for storing uploaded PDFs & generated CSV files
+### ✔ **PDF Upload**
+Upload NIRF PDFs for any institute. The backend automatically:
 
-ML model (Random Forest) for predicting total capital expenditure
+- Extracts tables & financial entries  
+- Converts extracted data into a clean CSV  
+- Stores both **PDF + CSV in Supabase Storage**  
+- Saves metadata to PostgreSQL  
+- Detects **UG / PG / Overall** PDF type  
+- Computes **SHA-256 hash** to prevent duplicates  
 
-Custom extraction pipeline for NIRF 2023/2024/2025 formats
+---
 
-📦 Features
-✔ PDF Upload
+### ✔ **File Viewer**
+The frontend page `/view-data` displays:
 
-Upload NIRF PDFs for any institute. The backend:
+- List of all stored PDFs  
+- List of all generated CSVs  
+- File size + download links  
+- Auto-fetch via **FastAPI `/api/storage/list_all`**  
 
-Extracts tables & financial entries
+---
 
-Converts the extracted data to a clean CSV
+### ✔ **Machine Learning Prediction**
+Predicts **Total Capital Expenditure** using features:
 
-Stores PDF + CSV in Supabase Storage
+- Library  
+- New Equipment for Laboratories  
+- Engineering Workshop  
+- Studio  
+- Other Expenditure  
 
-Saves metadata to PostgreSQL
+**Endpoints:**
+- `POST /api/capital_predict`  
+- `GET /api/feature_imp`  
 
-Detects UG/PG/Overall PDF type
+---
 
-Computes SHA-256 hash to avoid duplicate uploads
+### ✔ **Supabase Integration**
+All uploaded files are stored securely in Supabase buckets:
 
-✔ File Viewer
+- `pdfs/`  
+- `csvs/`  
 
-Frontend page /view-data displays:
+---
 
-List of all PDFs stored
+### ✔ **Full FastAPI REST Backend**
+Backend includes the following endpoints:
 
-List of generated CSVs
+- `/api/upload/pdf`  
+- `/api/storage/list_all`  
+- `/api/capital_predict`  
+- `/api/feature_imp`  
 
-File size + download links
+---
 
-Auto-fetch from FastAPI /api/storage/list_all
+### ✔ **Tableau Visualisations**
+Integrated Tableau dashboards for interactive analysis.
 
-✔ Machine Learning Prediction
-
-Predicts Total Capital Expenditure using:
-
-Library
-
-New Equipment for Laboratories
-
-Engineering Workshop
-
-Studio
-
-Other expenditure
-
-Endpoints:
-
-POST /api/capital_predict
-GET /api/feature_imp
-
-✔ Supabase Integration
-
-All uploaded files (PDF/CSV) are pushed to Supabase buckets:
-
-pdfs/
-
-csvs/
-
-✔ Full FastAPI REST Backend
-
-Includes endpoints:
-
-/api/upload/pdf
-/api/storage/list_all
-/api/capital_predict
-/api/feature_imp
-
-✔ Tableau visualisations
+---
