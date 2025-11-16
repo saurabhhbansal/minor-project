@@ -1,0 +1,681 @@
+2025-11-14 19:42:42,991 INFO: 
+=== 🚀 STARTING BATCH PROCESS ===
+2025-11-14 19:42:42,994 INFO: Connecting to database...
+2025-11-14 19:42:46,896 INFO: Database connection OK.
+2025-11-14 19:42:46,903 INFO: 📄 Detected: SINGLE PDF upload
+2025-11-14 19:42:46,903 INFO: === SINGLE PDF MODE === Processing IIT Delhi NIRF Engineering 2025.pdf
+2025-11-14 19:42:55,503 INFO: DB upsert successful for IIT Delhi NIRF Engineering 2025.pdf
+2025-11-14 19:43:09,172 INFO: HTTP Request: POST https://wegavpoiduslmcpdcqtv.supabase.co/storage/v1/object/list/csvs "HTTP/2 200 OK"
+2025-11-14 19:43:09,213 ERROR: ⚠ CSV update failed for IIT Delhi NIRF Engineering 2025.pdf: Cannot save file into a non-existent directory: '\tmp'
+Traceback (most recent call last):
+  File "C:\Users\Nitima\minor-3\backend\scripts\process_batch.py", line 127, in process_single_pdf
+    pdf_extractor.append_to_csv(
+  File "C:\Users\Nitima\minor-3\backend\app\services\pdf_extractor.py", line 765, in append_to_csv
+    local_csv_path, csv_name = csv_manager.ensure_csv_for_college_type(college_type)
+                               ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "C:\Users\Nitima\minor-3\backend\app\services\csv_manager.py", line 39, in ensure_csv_for_college_type
+    df.to_csv(local_csv, index=False)
+  File "C:\Users\Nitima\minor-3\venv\Lib\site-packages\pandas\util\_decorators.py", line 333, in wrapper
+    return func(*args, **kwargs)
+           ^^^^^^^^^^^^^^^^^^^^^
+  File "C:\Users\Nitima\minor-3\venv\Lib\site-packages\pandas\core\generic.py", line 3989, in to_csv
+    return DataFrameRenderer(formatter).to_csv(
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "C:\Users\Nitima\minor-3\venv\Lib\site-packages\pandas\io\formats\format.py", line 1014, in to_csv
+    csv_formatter.save()
+  File "C:\Users\Nitima\minor-3\venv\Lib\site-packages\pandas\io\formats\csvs.py", line 251, in save
+    with get_handle(
+         ^^^^^^^^^^^
+  File "C:\Users\Nitima\minor-3\venv\Lib\site-packages\pandas\io\common.py", line 749, in get_handle
+    check_parent_directory(str(handle))
+  File "C:\Users\Nitima\minor-3\venv\Lib\site-packages\pandas\io\common.py", line 616, in check_parent_directory
+    raise OSError(rf"Cannot save file into a non-existent directory: '{parent}'")
+OSError: Cannot save file into a non-existent directory: '\tmp'
+2025-11-14 19:43:09,239 INFO: ✅ Single PDF processed successfully: IIT Delhi NIRF Engineering 2025.pdf
+2025-11-14 19:43:09,239 INFO: 🎉 SINGLE PDF processing complete
+2025-11-14 19:53:09,207 INFO: 
+=== 🚀 STARTING BATCH PROCESS ===
+2025-11-14 19:53:09,208 INFO: Connecting to database...
+2025-11-14 19:53:12,967 INFO: Database connection OK.
+2025-11-14 19:53:12,970 INFO: 📄 Detected: SINGLE PDF upload
+2025-11-14 19:53:12,971 INFO: === SINGLE PDF MODE === Processing IIT Delhi NIRF Engineering 2025.pdf
+2025-11-14 19:53:21,606 INFO: DB upsert successful for IIT Delhi NIRF Engineering 2025.pdf
+2025-11-14 19:53:30,763 INFO: HTTP Request: POST https://wegavpoiduslmcpdcqtv.supabase.co/storage/v1/object/list/csvs "HTTP/2 200 OK"
+2025-11-14 19:53:33,203 INFO: HTTP Request: GET https://wegavpoiduslmcpdcqtv.supabase.co/storage/v1/object/csvs/NIRF_IIT'S_output.csv "HTTP/2 200 OK"
+2025-11-14 19:53:33,315 ERROR: ⚠ CSV update failed for IIT Delhi NIRF Engineering 2025.pdf: Header value must be str or bytes, not <class 'bool'>
+Traceback (most recent call last):
+  File "C:\Users\Nitima\minor-3\backend\scripts\process_batch.py", line 127, in process_single_pdf
+    pdf_extractor.append_to_csv(
+  File "C:\Users\Nitima\minor-3\backend\app\services\pdf_extractor.py", line 898, in append_to_csv
+    csv_manager.append_row_to_csv(local_csv_path, row_data, csv_name)
+  File "C:\Users\Nitima\minor-3\backend\app\services\csv_manager.py", line 52, in append_row_to_csv
+    storage_utils.upload_file(CSV_BUCKET, local_csv_path, csv_name)
+  File "C:\Users\Nitima\minor-3\backend\app\services\storage_utils.py", line 16, in upload_file
+    res = sb.storage.from_(bucket).upload(storage_path, f, {"cacheControl": "3600", "contentType": None, "upsert": upsert})
+          ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "C:\Users\Nitima\minor-3\venv\Lib\site-packages\storage3\_sync\file_api.py", line 566, in upload
+    return self._upload_or_update("POST", path_parts, file, file_options)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "C:\Users\Nitima\minor-3\venv\Lib\site-packages\storage3\_sync\file_api.py", line 538, in _upload_or_update
+    response = self._request(
+               ^^^^^^^^^^^^^^
+  File "C:\Users\Nitima\minor-3\venv\Lib\site-packages\storage3\_sync\file_api.py", line 70, in _request
+    response = self._client.request(
+               ^^^^^^^^^^^^^^^^^^^^^
+  File "C:\Users\Nitima\minor-3\venv\Lib\site-packages\httpx\_client.py", line 812, in request
+    request = self.build_request(
+              ^^^^^^^^^^^^^^^^^^^
+  File "C:\Users\Nitima\minor-3\venv\Lib\site-packages\httpx\_client.py", line 367, in build_request
+    headers = self._merge_headers(headers)
+              ^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "C:\Users\Nitima\minor-3\venv\Lib\site-packages\httpx\_client.py", line 430, in _merge_headers
+    merged_headers.update(headers)
+  File "C:\Users\Nitima\minor-3\venv\Lib\site-packages\httpx\_models.py", line 275, in update
+    headers = Headers(headers)
+              ^^^^^^^^^^^^^^^^
+  File "C:\Users\Nitima\minor-3\venv\Lib\site-packages\httpx\_models.py", line 156, in __init__
+    bytes_value = _normalize_header_value(v, encoding)
+                  ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "C:\Users\Nitima\minor-3\venv\Lib\site-packages\httpx\_models.py", line 81, in _normalize_header_value
+    raise TypeError(f"Header value must be str or bytes, not {type(value)}")
+TypeError: Header value must be str or bytes, not <class 'bool'>
+2025-11-14 19:53:33,334 INFO: ✅ Single PDF processed successfully: IIT Delhi NIRF Engineering 2025.pdf
+2025-11-14 19:53:33,335 INFO: 🎉 SINGLE PDF processing complete
+2025-11-14 19:59:14,273 INFO: 
+=== 🚀 STARTING BATCH PROCESS ===
+2025-11-14 19:59:14,275 INFO: Connecting to database...
+2025-11-14 19:59:17,910 INFO: Database connection OK.
+2025-11-14 19:59:17,912 INFO: 📄 Detected: SINGLE PDF upload
+2025-11-14 19:59:17,913 INFO: === SINGLE PDF MODE === Processing IIT Delhi NIRF Engineering 2025.pdf
+2025-11-14 19:59:25,875 INFO: DB upsert successful for IIT Delhi NIRF Engineering 2025.pdf
+2025-11-14 19:59:35,163 INFO: HTTP Request: POST https://wegavpoiduslmcpdcqtv.supabase.co/storage/v1/object/list/csvs "HTTP/2 200 OK"
+2025-11-14 19:59:36,207 INFO: HTTP Request: GET https://wegavpoiduslmcpdcqtv.supabase.co/storage/v1/object/csvs/NIRF_IIT'S_output.csv "HTTP/2 200 OK"
+2025-11-14 19:59:36,304 ERROR: ⚠ CSV update failed for IIT Delhi NIRF Engineering 2025.pdf: Header value must be str or bytes, not <class 'NoneType'>
+Traceback (most recent call last):
+  File "C:\Users\Nitima\minor-3\backend\scripts\process_batch.py", line 127, in process_single_pdf
+    pdf_extractor.append_to_csv(
+  File "C:\Users\Nitima\minor-3\backend\app\services\pdf_extractor.py", line 900, in append_to_csv
+    csv_manager.append_row_to_csv(local_csv_path, row_data, csv_name)
+  File "C:\Users\Nitima\minor-3\backend\app\services\csv_manager.py", line 52, in append_row_to_csv
+    storage_utils.upload_file(CSV_BUCKET, local_csv_path, csv_name)
+  File "C:\Users\Nitima\minor-3\backend\app\services\storage_utils.py", line 16, in upload_file
+    res = sb.storage.from_(bucket).upload(path=storage_path,file=f,file_options={"cacheControl": "3600", "contentType": None})
+          ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "C:\Users\Nitima\minor-3\venv\Lib\site-packages\storage3\_sync\file_api.py", line 566, in upload
+    return self._upload_or_update("POST", path_parts, file, file_options)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "C:\Users\Nitima\minor-3\venv\Lib\site-packages\storage3\_sync\file_api.py", line 538, in _upload_or_update
+    response = self._request(
+               ^^^^^^^^^^^^^^
+  File "C:\Users\Nitima\minor-3\venv\Lib\site-packages\storage3\_sync\file_api.py", line 70, in _request
+    response = self._client.request(
+               ^^^^^^^^^^^^^^^^^^^^^
+  File "C:\Users\Nitima\minor-3\venv\Lib\site-packages\httpx\_client.py", line 812, in request
+    request = self.build_request(
+              ^^^^^^^^^^^^^^^^^^^
+  File "C:\Users\Nitima\minor-3\venv\Lib\site-packages\httpx\_client.py", line 367, in build_request
+    headers = self._merge_headers(headers)
+              ^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "C:\Users\Nitima\minor-3\venv\Lib\site-packages\httpx\_client.py", line 430, in _merge_headers
+    merged_headers.update(headers)
+  File "C:\Users\Nitima\minor-3\venv\Lib\site-packages\httpx\_models.py", line 275, in update
+    headers = Headers(headers)
+              ^^^^^^^^^^^^^^^^
+  File "C:\Users\Nitima\minor-3\venv\Lib\site-packages\httpx\_models.py", line 156, in __init__
+    bytes_value = _normalize_header_value(v, encoding)
+                  ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "C:\Users\Nitima\minor-3\venv\Lib\site-packages\httpx\_models.py", line 81, in _normalize_header_value
+    raise TypeError(f"Header value must be str or bytes, not {type(value)}")
+TypeError: Header value must be str or bytes, not <class 'NoneType'>
+2025-11-14 19:59:36,320 INFO: ✅ Single PDF processed successfully: IIT Delhi NIRF Engineering 2025.pdf
+2025-11-14 19:59:36,321 INFO: 🎉 SINGLE PDF processing complete
+2025-11-14 20:02:10,774 INFO: 
+=== 🚀 STARTING BATCH PROCESS ===
+2025-11-14 20:02:10,776 INFO: Connecting to database...
+2025-11-14 20:02:14,419 INFO: Database connection OK.
+2025-11-14 20:02:14,421 INFO: 📄 Detected: SINGLE PDF upload
+2025-11-14 20:02:14,422 INFO: === SINGLE PDF MODE === Processing IIT Delhi NIRF Engineering 2025.pdf
+2025-11-14 20:02:22,407 INFO: DB upsert successful for IIT Delhi NIRF Engineering 2025.pdf
+2025-11-14 20:02:34,718 INFO: HTTP Request: POST https://wegavpoiduslmcpdcqtv.supabase.co/storage/v1/object/list/csvs "HTTP/2 200 OK"
+2025-11-14 20:02:35,410 INFO: HTTP Request: GET https://wegavpoiduslmcpdcqtv.supabase.co/storage/v1/object/csvs/NIRF_IIT'S_output.csv "HTTP/2 200 OK"
+2025-11-14 20:02:35,498 ERROR: ⚠ CSV update failed for IIT Delhi NIRF Engineering 2025.pdf: Header value must be str or bytes, not <class 'bool'>
+Traceback (most recent call last):
+  File "C:\Users\Nitima\minor-3\backend\scripts\process_batch.py", line 127, in process_single_pdf
+    pdf_extractor.append_to_csv(
+  File "C:\Users\Nitima\minor-3\backend\app\services\pdf_extractor.py", line 900, in append_to_csv
+    csv_manager.append_row_to_csv(local_csv_path, row_data, csv_name)
+  File "C:\Users\Nitima\minor-3\backend\app\services\csv_manager.py", line 52, in append_row_to_csv
+    storage_utils.upload_file(CSV_BUCKET, local_csv_path, csv_name)
+  File "C:\Users\Nitima\minor-3\backend\app\services\storage_utils.py", line 16, in upload_file
+    res = sb.storage.from_(bucket).upload(path=storage_path,file=f,file_options={"cacheControl": "3600","contentType": "text/csv","upsert": True})
+          ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "C:\Users\Nitima\minor-3\venv\Lib\site-packages\storage3\_sync\file_api.py", line 566, in upload
+    return self._upload_or_update("POST", path_parts, file, file_options)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "C:\Users\Nitima\minor-3\venv\Lib\site-packages\storage3\_sync\file_api.py", line 538, in _upload_or_update
+    response = self._request(
+               ^^^^^^^^^^^^^^
+  File "C:\Users\Nitima\minor-3\venv\Lib\site-packages\storage3\_sync\file_api.py", line 70, in _request
+    response = self._client.request(
+               ^^^^^^^^^^^^^^^^^^^^^
+  File "C:\Users\Nitima\minor-3\venv\Lib\site-packages\httpx\_client.py", line 812, in request
+    request = self.build_request(
+              ^^^^^^^^^^^^^^^^^^^
+  File "C:\Users\Nitima\minor-3\venv\Lib\site-packages\httpx\_client.py", line 367, in build_request
+    headers = self._merge_headers(headers)
+              ^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "C:\Users\Nitima\minor-3\venv\Lib\site-packages\httpx\_client.py", line 430, in _merge_headers
+    merged_headers.update(headers)
+  File "C:\Users\Nitima\minor-3\venv\Lib\site-packages\httpx\_models.py", line 275, in update
+    headers = Headers(headers)
+              ^^^^^^^^^^^^^^^^
+  File "C:\Users\Nitima\minor-3\venv\Lib\site-packages\httpx\_models.py", line 156, in __init__
+    bytes_value = _normalize_header_value(v, encoding)
+                  ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "C:\Users\Nitima\minor-3\venv\Lib\site-packages\httpx\_models.py", line 81, in _normalize_header_value
+    raise TypeError(f"Header value must be str or bytes, not {type(value)}")
+TypeError: Header value must be str or bytes, not <class 'bool'>
+2025-11-14 20:02:35,511 INFO: ✅ Single PDF processed successfully: IIT Delhi NIRF Engineering 2025.pdf
+2025-11-14 20:02:35,518 INFO: 🎉 SINGLE PDF processing complete
+2025-11-14 20:12:03,321 INFO: 
+=== 🚀 STARTING BATCH PROCESS ===
+2025-11-14 20:12:03,323 INFO: Connecting to database...
+2025-11-14 20:12:07,091 INFO: Database connection OK.
+2025-11-14 20:12:07,092 INFO: 📄 Detected: SINGLE PDF upload
+2025-11-14 20:12:07,094 INFO: === SINGLE PDF MODE === Processing IIT Delhi NIRF Engineering 2025.pdf
+2025-11-14 20:12:13,185 INFO: DB upsert successful for IIT Delhi NIRF Engineering 2025.pdf
+2025-11-14 20:12:25,137 INFO: HTTP Request: POST https://wegavpoiduslmcpdcqtv.supabase.co/storage/v1/object/list/csvs "HTTP/2 200 OK"
+2025-11-14 20:12:26,262 INFO: HTTP Request: GET https://wegavpoiduslmcpdcqtv.supabase.co/storage/v1/object/csvs/NIRF_IIT'S_output.csv "HTTP/2 200 OK"
+2025-11-14 20:12:26,739 INFO: HTTP Request: POST https://wegavpoiduslmcpdcqtv.supabase.co/storage/v1/object/csvs/NIRF_IIT'S_output.csv "HTTP/2 400 Bad Request"
+2025-11-14 20:12:26,743 ERROR: ⚠ CSV update failed for IIT Delhi NIRF Engineering 2025.pdf: {'statusCode': 409, 'error': Duplicate, 'message': The resource already exists}
+Traceback (most recent call last):
+  File "C:\Users\Nitima\minor-3\venv\Lib\site-packages\storage3\_sync\file_api.py", line 78, in _request
+    response.raise_for_status()
+  File "C:\Users\Nitima\minor-3\venv\Lib\site-packages\httpx\_models.py", line 829, in raise_for_status
+    raise HTTPStatusError(message, request=request, response=self)
+httpx.HTTPStatusError: Client error '400 Bad Request' for url 'https://wegavpoiduslmcpdcqtv.supabase.co/storage/v1/object/csvs/NIRF_IIT'S_output.csv'
+For more information check: https://developer.mozilla.org/en-US/docs/Web/HTTP/Status/400
+
+The above exception was the direct cause of the following exception:
+
+Traceback (most recent call last):
+  File "C:\Users\Nitima\minor-3\backend\scripts\process_batch.py", line 127, in process_single_pdf
+    pdf_extractor.append_to_csv(
+  File "C:\Users\Nitima\minor-3\backend\app\services\pdf_extractor.py", line 900, in append_to_csv
+    csv_manager.append_row_to_csv(local_csv_path, row_data, csv_name)
+  File "C:\Users\Nitima\minor-3\backend\app\services\csv_manager.py", line 57, in append_row_to_csv
+    storage_utils.upload_file(CSV_BUCKET, local_csv_path, csv_name)
+  File "C:\Users\Nitima\minor-3\backend\app\services\storage_utils.py", line 32, in upload_file
+    result = sb.storage.from_(bucket).upload(
+             ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "C:\Users\Nitima\minor-3\venv\Lib\site-packages\storage3\_sync\file_api.py", line 566, in upload
+    return self._upload_or_update("POST", path_parts, file, file_options)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "C:\Users\Nitima\minor-3\venv\Lib\site-packages\storage3\_sync\file_api.py", line 538, in _upload_or_update
+    response = self._request(
+               ^^^^^^^^^^^^^^
+  File "C:\Users\Nitima\minor-3\venv\Lib\site-packages\storage3\_sync\file_api.py", line 81, in _request
+    raise StorageApiError(
+storage3.exceptions.StorageApiError: {'statusCode': 409, 'error': Duplicate, 'message': The resource already exists}
+2025-11-14 20:12:26,765 INFO: ✅ Single PDF processed successfully: IIT Delhi NIRF Engineering 2025.pdf
+2025-11-14 20:12:26,766 INFO: 🎉 SINGLE PDF processing complete
+2025-11-14 20:27:10,235 INFO: 
+=== 🚀 STARTING BATCH PROCESS ===
+2025-11-14 20:27:10,236 INFO: Connecting to database...
+2025-11-14 20:27:15,330 INFO: Database connection OK.
+2025-11-14 20:27:15,331 INFO: 📄 Detected: SINGLE PDF upload
+2025-11-14 20:27:15,332 INFO: === SINGLE PDF MODE === Processing IIT Delhi NIRF Engineering 2025.pdf
+2025-11-14 20:27:22,358 INFO: DB upsert successful for IIT Delhi NIRF Engineering 2025.pdf
+2025-11-14 20:27:31,555 INFO: HTTP Request: POST https://wegavpoiduslmcpdcqtv.supabase.co/storage/v1/object/list/csvs "HTTP/2 200 OK"
+2025-11-14 20:27:31,818 INFO: HTTP Request: GET https://wegavpoiduslmcpdcqtv.supabase.co/storage/v1/object/csvs/NIRF_IIT'S_output.csv "HTTP/2 200 OK"
+2025-11-14 20:27:32,205 INFO: HTTP Request: POST https://wegavpoiduslmcpdcqtv.supabase.co/storage/v1/object/csvs/NIRF_IIT'S_output.csv "HTTP/2 400 Bad Request"
+2025-11-14 20:27:32,209 ERROR: ⚠ CSV update failed for IIT Delhi NIRF Engineering 2025.pdf: {'statusCode': 409, 'error': Duplicate, 'message': The resource already exists}
+Traceback (most recent call last):
+  File "C:\Users\Nitima\minor-3\venv\Lib\site-packages\storage3\_sync\file_api.py", line 78, in _request
+    response.raise_for_status()
+  File "C:\Users\Nitima\minor-3\venv\Lib\site-packages\httpx\_models.py", line 829, in raise_for_status
+    raise HTTPStatusError(message, request=request, response=self)
+httpx.HTTPStatusError: Client error '400 Bad Request' for url 'https://wegavpoiduslmcpdcqtv.supabase.co/storage/v1/object/csvs/NIRF_IIT'S_output.csv'
+For more information check: https://developer.mozilla.org/en-US/docs/Web/HTTP/Status/400
+
+The above exception was the direct cause of the following exception:
+
+Traceback (most recent call last):
+  File "C:\Users\Nitima\minor-3\backend\scripts\process_batch.py", line 127, in process_single_pdf
+    pdf_extractor.append_to_csv(
+  File "C:\Users\Nitima\minor-3\backend\app\services\pdf_extractor.py", line 900, in append_to_csv
+    csv_manager.append_row_to_csv(local_csv_path, row_data, csv_name)
+  File "C:\Users\Nitima\minor-3\backend\app\services\csv_manager.py", line 57, in append_row_to_csv
+    storage_utils.upload_file(CSV_BUCKET, local_csv_path, csv_name)
+  File "C:\Users\Nitima\minor-3\backend\app\services\storage_utils.py", line 32, in upload_file
+    result = sb.storage.from_(bucket).upload(
+             ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "C:\Users\Nitima\minor-3\venv\Lib\site-packages\storage3\_sync\file_api.py", line 566, in upload
+    return self._upload_or_update("POST", path_parts, file, file_options)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "C:\Users\Nitima\minor-3\venv\Lib\site-packages\storage3\_sync\file_api.py", line 538, in _upload_or_update
+    response = self._request(
+               ^^^^^^^^^^^^^^
+  File "C:\Users\Nitima\minor-3\venv\Lib\site-packages\storage3\_sync\file_api.py", line 81, in _request
+    raise StorageApiError(
+storage3.exceptions.StorageApiError: {'statusCode': 409, 'error': Duplicate, 'message': The resource already exists}
+2025-11-14 20:27:32,223 INFO: ✅ Single PDF processed successfully: IIT Delhi NIRF Engineering 2025.pdf
+2025-11-14 20:27:32,224 INFO: 🎉 SINGLE PDF processing complete
+2025-11-14 20:32:25,243 INFO: 
+=== 🚀 STARTING BATCH PROCESS ===
+2025-11-14 20:32:25,244 INFO: Connecting to database...
+2025-11-14 20:32:28,798 INFO: Database connection OK.
+2025-11-14 20:32:28,800 INFO: 📄 Detected: SINGLE PDF upload
+2025-11-14 20:32:28,801 INFO: === SINGLE PDF MODE === Processing IIT Delhi NIRF Engineering 2025.pdf
+2025-11-14 20:32:31,564 INFO: === DEBUG: Wide DF Extracted ===
+2025-11-14 20:32:31,572 INFO:                       College Name  ... Seminars/Conferences/Workshops (2021-22)
+0  Iit Delhi Nirf Engineering 2025  ...                                         
+
+[1 rows x 25 columns]
+2025-11-14 20:32:31,706 INFO: Index(['College Name', 'Library (2023-24)',
+       'New Equipment for Laboratories (2023-24)',
+       'Engineering Workshops (2023-24)', 'Studios (2023-24)',
+       'Other expenditure on creation of Capital Assets (2023-24)',
+       'Library (2022-23)', 'New Equipment for Laboratories (2022-23)',
+       'Engineering Workshops (2022-23)', 'Studios (2022-23)',
+       'Other expenditure on creation of Capital Assets (2022-23)',
+       'Library (2021-22)', 'New Equipment for Laboratories (2021-22)',
+       'Engineering Workshops (2021-22)', 'Studios (2021-22)',
+       'Other expenditure on creation of Capital Assets (2021-22)',
+       'Salaries (2023-24)',
+       'Maintenance of Academic Infrastructure or consumables and other running expenditures (2023-24)',
+       'Seminars/Conferences/Workshops (2023-24)', 'Salaries (2022-23)',
+       'Maintenance of Academic Infrastructure or consumables and other running expenditures (2022-23)',
+       'Seminars/Conferences/Workshops (2022-23)', 'Salaries (2021-22)',
+       'Maintenance of Academic Infrastructure or consumables and other running expenditures (2021-22)',
+       'Seminars/Conferences/Workshops (2021-22)'],
+      dtype='object')
+2025-11-14 20:32:31,737 INFO: === DEBUG: Long DF Before Upsert ===
+2025-11-14 20:32:31,739 INFO: Empty DataFrame
+Columns: [institution_name, college_type, category, year, amount]
+Index: []
+2025-11-14 20:32:34,914 INFO: DB upsert successful for IIT Delhi NIRF Engineering 2025.pdf
+2025-11-14 20:32:44,205 INFO: HTTP Request: POST https://wegavpoiduslmcpdcqtv.supabase.co/storage/v1/object/list/csvs "HTTP/2 200 OK"
+2025-11-14 20:32:45,229 INFO: HTTP Request: GET https://wegavpoiduslmcpdcqtv.supabase.co/storage/v1/object/csvs/NIRF_IIT'S_output.csv "HTTP/2 200 OK"
+2025-11-14 20:32:45,580 INFO: HTTP Request: POST https://wegavpoiduslmcpdcqtv.supabase.co/storage/v1/object/csvs/NIRF_IIT'S_output.csv "HTTP/2 400 Bad Request"
+2025-11-14 20:32:45,585 ERROR: ⚠ CSV update failed for IIT Delhi NIRF Engineering 2025.pdf: {'statusCode': 409, 'error': Duplicate, 'message': The resource already exists}
+Traceback (most recent call last):
+  File "C:\Users\Nitima\minor-3\venv\Lib\site-packages\storage3\_sync\file_api.py", line 78, in _request
+    response.raise_for_status()
+  File "C:\Users\Nitima\minor-3\venv\Lib\site-packages\httpx\_models.py", line 829, in raise_for_status
+    raise HTTPStatusError(message, request=request, response=self)
+httpx.HTTPStatusError: Client error '400 Bad Request' for url 'https://wegavpoiduslmcpdcqtv.supabase.co/storage/v1/object/csvs/NIRF_IIT'S_output.csv'
+For more information check: https://developer.mozilla.org/en-US/docs/Web/HTTP/Status/400
+
+The above exception was the direct cause of the following exception:
+
+Traceback (most recent call last):
+  File "C:\Users\Nitima\minor-3\backend\scripts\process_batch.py", line 136, in process_single_pdf
+    pdf_extractor.append_to_csv(
+  File "C:\Users\Nitima\minor-3\backend\app\services\pdf_extractor.py", line 900, in append_to_csv
+    csv_manager.append_row_to_csv(local_csv_path, row_data, csv_name)
+  File "C:\Users\Nitima\minor-3\backend\app\services\csv_manager.py", line 57, in append_row_to_csv
+    storage_utils.upload_file(CSV_BUCKET, local_csv_path, csv_name)
+  File "C:\Users\Nitima\minor-3\backend\app\services\storage_utils.py", line 32, in upload_file
+    result = sb.storage.from_(bucket).upload(
+             ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "C:\Users\Nitima\minor-3\venv\Lib\site-packages\storage3\_sync\file_api.py", line 566, in upload
+    return self._upload_or_update("POST", path_parts, file, file_options)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "C:\Users\Nitima\minor-3\venv\Lib\site-packages\storage3\_sync\file_api.py", line 538, in _upload_or_update
+    response = self._request(
+               ^^^^^^^^^^^^^^
+  File "C:\Users\Nitima\minor-3\venv\Lib\site-packages\storage3\_sync\file_api.py", line 81, in _request
+    raise StorageApiError(
+storage3.exceptions.StorageApiError: {'statusCode': 409, 'error': Duplicate, 'message': The resource already exists}
+2025-11-14 20:32:45,600 INFO: ✅ Single PDF processed successfully: IIT Delhi NIRF Engineering 2025.pdf
+2025-11-14 20:32:45,601 INFO: 🎉 SINGLE PDF processing complete
+2025-11-14 20:38:00,838 INFO: 
+=== 🚀 STARTING BATCH PROCESS ===
+2025-11-14 20:38:00,839 INFO: Connecting to database...
+2025-11-14 20:38:06,454 INFO: Database connection OK.
+2025-11-14 20:38:06,458 INFO: 📄 Detected: SINGLE PDF upload
+2025-11-14 20:38:06,459 INFO: === SINGLE PDF MODE === Processing IIT Delhi NIRF Engineering 2025.pdf
+2025-11-14 20:38:09,336 INFO: === DEBUG: Wide DF Extracted ===
+2025-11-14 20:38:09,338 INFO:                       College Name  ... Seminars/Conferences/Workshops (2021-22)
+0  Iit Delhi Nirf Engineering 2025  ...                                         
+
+[1 rows x 25 columns]
+2025-11-14 20:38:09,379 INFO: Index(['College Name', 'Library (2023-24)',
+       'New Equipment for Laboratories (2023-24)',
+       'Engineering Workshops (2023-24)', 'Studios (2023-24)',
+       'Other expenditure on creation of Capital Assets (2023-24)',
+       'Library (2022-23)', 'New Equipment for Laboratories (2022-23)',
+       'Engineering Workshops (2022-23)', 'Studios (2022-23)',
+       'Other expenditure on creation of Capital Assets (2022-23)',
+       'Library (2021-22)', 'New Equipment for Laboratories (2021-22)',
+       'Engineering Workshops (2021-22)', 'Studios (2021-22)',
+       'Other expenditure on creation of Capital Assets (2021-22)',
+       'Salaries (2023-24)',
+       'Maintenance of Academic Infrastructure or consumables and other running expenditures (2023-24)',
+       'Seminars/Conferences/Workshops (2023-24)', 'Salaries (2022-23)',
+       'Maintenance of Academic Infrastructure or consumables and other running expenditures (2022-23)',
+       'Seminars/Conferences/Workshops (2022-23)', 'Salaries (2021-22)',
+       'Maintenance of Academic Infrastructure or consumables and other running expenditures (2021-22)',
+       'Seminars/Conferences/Workshops (2021-22)'],
+      dtype='object')
+2025-11-14 20:38:09,394 INFO: === DEBUG: Long DF Before Upsert ===
+2025-11-14 20:38:09,395 INFO: Empty DataFrame
+Columns: [institution_name, college_type, category, year, amount]
+Index: []
+2025-11-14 20:38:12,475 INFO: DB upsert successful for IIT Delhi NIRF Engineering 2025.pdf
+2025-11-14 20:38:21,915 INFO: HTTP Request: POST https://wegavpoiduslmcpdcqtv.supabase.co/storage/v1/object/list/csvs "HTTP/2 200 OK"
+2025-11-14 20:38:22,520 INFO: HTTP Request: GET https://wegavpoiduslmcpdcqtv.supabase.co/storage/v1/object/csvs/NIRF_IIT'S_output.csv "HTTP/2 200 OK"
+2025-11-14 20:38:22,893 INFO: HTTP Request: POST https://wegavpoiduslmcpdcqtv.supabase.co/storage/v1/object/csvs/NIRF_IIT'S_output.csv "HTTP/2 400 Bad Request"
+2025-11-14 20:38:22,897 ERROR: ⚠ CSV update failed for IIT Delhi NIRF Engineering 2025.pdf: {'statusCode': 409, 'error': Duplicate, 'message': The resource already exists}
+Traceback (most recent call last):
+  File "C:\Users\Nitima\minor-3\venv\Lib\site-packages\storage3\_sync\file_api.py", line 78, in _request
+    response.raise_for_status()
+  File "C:\Users\Nitima\minor-3\venv\Lib\site-packages\httpx\_models.py", line 829, in raise_for_status
+    raise HTTPStatusError(message, request=request, response=self)
+httpx.HTTPStatusError: Client error '400 Bad Request' for url 'https://wegavpoiduslmcpdcqtv.supabase.co/storage/v1/object/csvs/NIRF_IIT'S_output.csv'
+For more information check: https://developer.mozilla.org/en-US/docs/Web/HTTP/Status/400
+
+The above exception was the direct cause of the following exception:
+
+Traceback (most recent call last):
+  File "C:\Users\Nitima\minor-3\backend\scripts\process_batch.py", line 136, in process_single_pdf
+    pdf_extractor.append_to_csv(
+  File "C:\Users\Nitima\minor-3\backend\app\services\pdf_extractor.py", line 900, in append_to_csv
+    csv_manager.append_row_to_csv(local_csv_path, row_data, csv_name)
+  File "C:\Users\Nitima\minor-3\backend\app\services\csv_manager.py", line 57, in append_row_to_csv
+    storage_utils.upload_file(CSV_BUCKET, local_csv_path, csv_name)
+  File "C:\Users\Nitima\minor-3\backend\app\services\storage_utils.py", line 32, in upload_file
+    result = sb.storage.from_(bucket).upload(
+             ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "C:\Users\Nitima\minor-3\venv\Lib\site-packages\storage3\_sync\file_api.py", line 566, in upload
+    return self._upload_or_update("POST", path_parts, file, file_options)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "C:\Users\Nitima\minor-3\venv\Lib\site-packages\storage3\_sync\file_api.py", line 538, in _upload_or_update
+    response = self._request(
+               ^^^^^^^^^^^^^^
+  File "C:\Users\Nitima\minor-3\venv\Lib\site-packages\storage3\_sync\file_api.py", line 81, in _request
+    raise StorageApiError(
+storage3.exceptions.StorageApiError: {'statusCode': 409, 'error': Duplicate, 'message': The resource already exists}
+2025-11-14 20:38:22,916 INFO: ✅ Single PDF processed successfully: IIT Delhi NIRF Engineering 2025.pdf
+2025-11-14 20:38:22,918 INFO: 🎉 SINGLE PDF processing complete
+2025-11-14 20:44:40,426 INFO: 
+=== 🚀 STARTING BATCH PROCESS ===
+2025-11-14 20:44:40,427 INFO: Connecting to database...
+2025-11-14 20:44:44,016 INFO: Database connection OK.
+2025-11-14 20:44:44,017 INFO: 📄 Detected: SINGLE PDF upload
+2025-11-14 20:44:44,018 INFO: === SINGLE PDF MODE === Processing IIT Delhi NIRF Engineering 2025.pdf
+2025-11-14 20:44:46,867 INFO: === DEBUG: Wide DF Extracted ===
+2025-11-14 20:44:46,872 INFO:                       College Name  ... Seminars/Conferences/Workshops (2021-22)
+0  Iit Delhi Nirf Engineering 2025  ...                                         
+
+[1 rows x 25 columns]
+2025-11-14 20:44:46,982 INFO: Index(['College Name', 'Library (2023-24)',
+       'New Equipment for Laboratories (2023-24)',
+       'Engineering Workshops (2023-24)', 'Studios (2023-24)',
+       'Other expenditure on creation of Capital Assets (2023-24)',
+       'Library (2022-23)', 'New Equipment for Laboratories (2022-23)',
+       'Engineering Workshops (2022-23)', 'Studios (2022-23)',
+       'Other expenditure on creation of Capital Assets (2022-23)',
+       'Library (2021-22)', 'New Equipment for Laboratories (2021-22)',
+       'Engineering Workshops (2021-22)', 'Studios (2021-22)',
+       'Other expenditure on creation of Capital Assets (2021-22)',
+       'Salaries (2023-24)',
+       'Maintenance of Academic Infrastructure or consumables and other running expenditures (2023-24)',
+       'Seminars/Conferences/Workshops (2023-24)', 'Salaries (2022-23)',
+       'Maintenance of Academic Infrastructure or consumables and other running expenditures (2022-23)',
+       'Seminars/Conferences/Workshops (2022-23)', 'Salaries (2021-22)',
+       'Maintenance of Academic Infrastructure or consumables and other running expenditures (2021-22)',
+       'Seminars/Conferences/Workshops (2021-22)'],
+      dtype='object')
+2025-11-14 20:44:46,999 INFO: === DEBUG: Long DF Before Upsert ===
+2025-11-14 20:44:46,999 INFO: Empty DataFrame
+Columns: [institution_name, college_type, category, year, amount]
+Index: []
+2025-11-14 20:44:47,017 INFO: Rows: 0
+2025-11-14 20:44:50,141 INFO: DB upsert successful for IIT Delhi NIRF Engineering 2025.pdf
+2025-11-14 20:44:59,298 INFO: HTTP Request: POST https://wegavpoiduslmcpdcqtv.supabase.co/storage/v1/object/list/csvs "HTTP/2 200 OK"
+2025-11-14 20:44:59,577 INFO: HTTP Request: GET https://wegavpoiduslmcpdcqtv.supabase.co/storage/v1/object/csvs/NIRF_IIT'S_output.csv "HTTP/2 200 OK"
+2025-11-14 20:44:59,990 INFO: HTTP Request: POST https://wegavpoiduslmcpdcqtv.supabase.co/storage/v1/object/csvs/NIRF_IIT'S_output.csv "HTTP/2 400 Bad Request"
+2025-11-14 20:44:59,996 ERROR: ⚠ CSV update failed for IIT Delhi NIRF Engineering 2025.pdf: {'statusCode': 409, 'error': Duplicate, 'message': The resource already exists}
+Traceback (most recent call last):
+  File "C:\Users\Nitima\minor-3\venv\Lib\site-packages\storage3\_sync\file_api.py", line 78, in _request
+    response.raise_for_status()
+  File "C:\Users\Nitima\minor-3\venv\Lib\site-packages\httpx\_models.py", line 829, in raise_for_status
+    raise HTTPStatusError(message, request=request, response=self)
+httpx.HTTPStatusError: Client error '400 Bad Request' for url 'https://wegavpoiduslmcpdcqtv.supabase.co/storage/v1/object/csvs/NIRF_IIT'S_output.csv'
+For more information check: https://developer.mozilla.org/en-US/docs/Web/HTTP/Status/400
+
+The above exception was the direct cause of the following exception:
+
+Traceback (most recent call last):
+  File "C:\Users\Nitima\minor-3\backend\scripts\process_batch.py", line 136, in process_single_pdf
+    pdf_extractor.append_to_csv(
+  File "C:\Users\Nitima\minor-3\backend\app\services\pdf_extractor.py", line 900, in append_to_csv
+    csv_manager.append_row_to_csv(local_csv_path, row_data, csv_name)
+  File "C:\Users\Nitima\minor-3\backend\app\services\csv_manager.py", line 57, in append_row_to_csv
+    storage_utils.upload_file(CSV_BUCKET, local_csv_path, csv_name)
+  File "C:\Users\Nitima\minor-3\backend\app\services\storage_utils.py", line 32, in upload_file
+    result = sb.storage.from_(bucket).upload(
+             ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "C:\Users\Nitima\minor-3\venv\Lib\site-packages\storage3\_sync\file_api.py", line 566, in upload
+    return self._upload_or_update("POST", path_parts, file, file_options)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "C:\Users\Nitima\minor-3\venv\Lib\site-packages\storage3\_sync\file_api.py", line 538, in _upload_or_update
+    response = self._request(
+               ^^^^^^^^^^^^^^
+  File "C:\Users\Nitima\minor-3\venv\Lib\site-packages\storage3\_sync\file_api.py", line 81, in _request
+    raise StorageApiError(
+storage3.exceptions.StorageApiError: {'statusCode': 409, 'error': Duplicate, 'message': The resource already exists}
+2025-11-14 20:45:00,020 INFO: ✅ Single PDF processed successfully: IIT Delhi NIRF Engineering 2025.pdf
+2025-11-14 20:45:00,021 INFO: 🎉 SINGLE PDF processing complete
+2025-11-14 20:49:06,956 INFO: 
+=== 🚀 STARTING BATCH PROCESS ===
+2025-11-14 20:49:06,956 INFO: Connecting to database...
+2025-11-14 20:49:10,478 INFO: Database connection OK.
+2025-11-14 20:49:10,482 INFO: 📄 Detected: SINGLE PDF upload
+2025-11-14 20:49:10,484 INFO: === SINGLE PDF MODE === Processing IIT Delhi NIRF Engineering 2025.pdf
+2025-11-14 20:49:14,256 INFO: === DEBUG: Wide DF Extracted ===
+2025-11-14 20:49:14,256 INFO:                       College Name  ... Seminars/Conferences/Workshops (2021-22)
+0  Iit Delhi Nirf Engineering 2025  ...                                         
+
+[1 rows x 25 columns]
+2025-11-14 20:49:14,320 INFO: Index(['College Name', 'Library (2023-24)',
+       'New Equipment for Laboratories (2023-24)',
+       'Engineering Workshops (2023-24)', 'Studios (2023-24)',
+       'Other expenditure on creation of Capital Assets (2023-24)',
+       'Library (2022-23)', 'New Equipment for Laboratories (2022-23)',
+       'Engineering Workshops (2022-23)', 'Studios (2022-23)',
+       'Other expenditure on creation of Capital Assets (2022-23)',
+       'Library (2021-22)', 'New Equipment for Laboratories (2021-22)',
+       'Engineering Workshops (2021-22)', 'Studios (2021-22)',
+       'Other expenditure on creation of Capital Assets (2021-22)',
+       'Salaries (2023-24)',
+       'Maintenance of Academic Infrastructure or consumables and other running expenditures (2023-24)',
+       'Seminars/Conferences/Workshops (2023-24)', 'Salaries (2022-23)',
+       'Maintenance of Academic Infrastructure or consumables and other running expenditures (2022-23)',
+       'Seminars/Conferences/Workshops (2022-23)', 'Salaries (2021-22)',
+       'Maintenance of Academic Infrastructure or consumables and other running expenditures (2021-22)',
+       'Seminars/Conferences/Workshops (2021-22)'],
+      dtype='object')
+2025-11-14 20:49:14,349 INFO: === DEBUG: Long DF Before Upsert ===
+2025-11-14 20:49:14,350 INFO: Empty DataFrame
+Columns: [institution_name, college_type, category, year, amount]
+Index: []
+2025-11-14 20:49:14,354 INFO: Rows: 0
+2025-11-14 20:49:17,403 INFO: DB upsert successful for IIT Delhi NIRF Engineering 2025.pdf
+2025-11-14 20:49:26,555 INFO: HTTP Request: POST https://wegavpoiduslmcpdcqtv.supabase.co/storage/v1/object/list/csvs "HTTP/2 200 OK"
+2025-11-14 20:49:26,812 INFO: HTTP Request: GET https://wegavpoiduslmcpdcqtv.supabase.co/storage/v1/object/csvs/NIRF_IIT'S_output.csv "HTTP/2 200 OK"
+2025-11-14 20:49:27,178 INFO: HTTP Request: POST https://wegavpoiduslmcpdcqtv.supabase.co/storage/v1/object/csvs/NIRF_IIT'S_output.csv "HTTP/2 400 Bad Request"
+2025-11-14 20:49:27,185 ERROR: ⚠ CSV update failed for IIT Delhi NIRF Engineering 2025.pdf: {'statusCode': 409, 'error': Duplicate, 'message': The resource already exists}
+Traceback (most recent call last):
+  File "C:\Users\Nitima\minor-3\venv\Lib\site-packages\storage3\_sync\file_api.py", line 78, in _request
+    response.raise_for_status()
+  File "C:\Users\Nitima\minor-3\venv\Lib\site-packages\httpx\_models.py", line 829, in raise_for_status
+    raise HTTPStatusError(message, request=request, response=self)
+httpx.HTTPStatusError: Client error '400 Bad Request' for url 'https://wegavpoiduslmcpdcqtv.supabase.co/storage/v1/object/csvs/NIRF_IIT'S_output.csv'
+For more information check: https://developer.mozilla.org/en-US/docs/Web/HTTP/Status/400
+
+The above exception was the direct cause of the following exception:
+
+Traceback (most recent call last):
+  File "C:\Users\Nitima\minor-3\backend\scripts\process_batch.py", line 136, in process_single_pdf
+    pdf_extractor.append_to_csv(
+  File "C:\Users\Nitima\minor-3\backend\app\services\pdf_extractor.py", line 900, in append_to_csv
+    csv_manager.append_row_to_csv(local_csv_path, row_data, csv_name)
+  File "C:\Users\Nitima\minor-3\backend\app\services\csv_manager.py", line 57, in append_row_to_csv
+    storage_utils.upload_file(CSV_BUCKET, local_csv_path, csv_name)
+  File "C:\Users\Nitima\minor-3\backend\app\services\storage_utils.py", line 32, in upload_file
+    result = sb.storage.from_(bucket).upload(
+             ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "C:\Users\Nitima\minor-3\venv\Lib\site-packages\storage3\_sync\file_api.py", line 566, in upload
+    return self._upload_or_update("POST", path_parts, file, file_options)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "C:\Users\Nitima\minor-3\venv\Lib\site-packages\storage3\_sync\file_api.py", line 538, in _upload_or_update
+    response = self._request(
+               ^^^^^^^^^^^^^^
+  File "C:\Users\Nitima\minor-3\venv\Lib\site-packages\storage3\_sync\file_api.py", line 81, in _request
+    raise StorageApiError(
+storage3.exceptions.StorageApiError: {'statusCode': 409, 'error': Duplicate, 'message': The resource already exists}
+2025-11-14 20:49:27,206 INFO: ✅ Single PDF processed successfully: IIT Delhi NIRF Engineering 2025.pdf
+2025-11-14 20:49:27,207 INFO: 🎉 SINGLE PDF processing complete
+2025-11-14 20:53:01,961 INFO: 
+=== 🚀 STARTING BATCH PROCESS ===
+2025-11-14 20:53:01,963 INFO: Connecting to database...
+2025-11-14 20:53:05,508 INFO: Database connection OK.
+2025-11-14 20:53:05,510 INFO: 📄 Detected: SINGLE PDF upload
+2025-11-14 20:53:05,511 INFO: === SINGLE PDF MODE === Processing IIT Delhi NIRF Engineering 2025.pdf
+2025-11-14 20:53:08,646 INFO: === DEBUG: Wide DF Extracted ===
+2025-11-14 20:53:08,650 INFO:                       College Name  ... Seminars/Conferences/Workshops (2021-22)
+0  Iit Delhi Nirf Engineering 2025  ...                                         
+
+[1 rows x 25 columns]
+2025-11-14 20:53:08,694 INFO: Index(['College Name', 'Library (2023-24)',
+       'New Equipment for Laboratories (2023-24)',
+       'Engineering Workshops (2023-24)', 'Studios (2023-24)',
+       'Other expenditure on creation of Capital Assets (2023-24)',
+       'Library (2022-23)', 'New Equipment for Laboratories (2022-23)',
+       'Engineering Workshops (2022-23)', 'Studios (2022-23)',
+       'Other expenditure on creation of Capital Assets (2022-23)',
+       'Library (2021-22)', 'New Equipment for Laboratories (2021-22)',
+       'Engineering Workshops (2021-22)', 'Studios (2021-22)',
+       'Other expenditure on creation of Capital Assets (2021-22)',
+       'Salaries (2023-24)',
+       'Maintenance of Academic Infrastructure or consumables and other running expenditures (2023-24)',
+       'Seminars/Conferences/Workshops (2023-24)', 'Salaries (2022-23)',
+       'Maintenance of Academic Infrastructure or consumables and other running expenditures (2022-23)',
+       'Seminars/Conferences/Workshops (2022-23)', 'Salaries (2021-22)',
+       'Maintenance of Academic Infrastructure or consumables and other running expenditures (2021-22)',
+       'Seminars/Conferences/Workshops (2021-22)'],
+      dtype='object')
+2025-11-14 20:53:08,698 INFO: === DEBUG: Long DF Before Upsert ===
+2025-11-14 20:53:08,707 INFO: Empty DataFrame
+Columns: [institution_name, college_type, category, year, amount]
+Index: []
+2025-11-14 20:53:08,711 INFO: Rows: 0
+2025-11-14 20:53:11,772 INFO: DB upsert successful for IIT Delhi NIRF Engineering 2025.pdf
+2025-11-14 20:53:21,008 INFO: HTTP Request: POST https://wegavpoiduslmcpdcqtv.supabase.co/storage/v1/object/list/csvs "HTTP/2 200 OK"
+2025-11-14 20:53:22,017 INFO: HTTP Request: GET https://wegavpoiduslmcpdcqtv.supabase.co/storage/v1/object/csvs/NIRF_IIT'S_output.csv "HTTP/2 200 OK"
+2025-11-14 20:53:22,392 INFO: HTTP Request: POST https://wegavpoiduslmcpdcqtv.supabase.co/storage/v1/object/csvs/NIRF_IIT'S_output.csv "HTTP/2 400 Bad Request"
+2025-11-14 20:53:22,394 ERROR: ⚠ CSV update failed for IIT Delhi NIRF Engineering 2025.pdf: {'statusCode': 409, 'error': Duplicate, 'message': The resource already exists}
+Traceback (most recent call last):
+  File "C:\Users\Nitima\minor-3\venv\Lib\site-packages\storage3\_sync\file_api.py", line 78, in _request
+    response.raise_for_status()
+  File "C:\Users\Nitima\minor-3\venv\Lib\site-packages\httpx\_models.py", line 829, in raise_for_status
+    raise HTTPStatusError(message, request=request, response=self)
+httpx.HTTPStatusError: Client error '400 Bad Request' for url 'https://wegavpoiduslmcpdcqtv.supabase.co/storage/v1/object/csvs/NIRF_IIT'S_output.csv'
+For more information check: https://developer.mozilla.org/en-US/docs/Web/HTTP/Status/400
+
+The above exception was the direct cause of the following exception:
+
+Traceback (most recent call last):
+  File "C:\Users\Nitima\minor-3\backend\scripts\process_batch.py", line 136, in process_single_pdf
+    pdf_extractor.append_to_csv(
+  File "C:\Users\Nitima\minor-3\backend\app\services\pdf_extractor.py", line 900, in append_to_csv
+    csv_manager.append_row_to_csv(local_csv_path, row_data, csv_name)
+  File "C:\Users\Nitima\minor-3\backend\app\services\csv_manager.py", line 57, in append_row_to_csv
+    storage_utils.upload_file(CSV_BUCKET, local_csv_path, csv_name)
+  File "C:\Users\Nitima\minor-3\backend\app\services\storage_utils.py", line 32, in upload_file
+    result = sb.storage.from_(bucket).upload(
+             ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "C:\Users\Nitima\minor-3\venv\Lib\site-packages\storage3\_sync\file_api.py", line 566, in upload
+    return self._upload_or_update("POST", path_parts, file, file_options)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "C:\Users\Nitima\minor-3\venv\Lib\site-packages\storage3\_sync\file_api.py", line 538, in _upload_or_update
+    response = self._request(
+               ^^^^^^^^^^^^^^
+  File "C:\Users\Nitima\minor-3\venv\Lib\site-packages\storage3\_sync\file_api.py", line 81, in _request
+    raise StorageApiError(
+storage3.exceptions.StorageApiError: {'statusCode': 409, 'error': Duplicate, 'message': The resource already exists}
+2025-11-14 20:53:22,400 INFO: ✅ Single PDF processed successfully: IIT Delhi NIRF Engineering 2025.pdf
+2025-11-14 20:53:22,400 INFO: 🎉 SINGLE PDF processing complete
+2025-11-14 20:54:14,404 INFO: 
+=== 🚀 STARTING BATCH PROCESS ===
+2025-11-14 20:54:14,406 INFO: Connecting to database...
+2025-11-14 20:54:18,270 INFO: Database connection OK.
+2025-11-14 20:54:18,281 INFO: 📄 Detected: SINGLE PDF upload
+2025-11-14 20:54:18,283 INFO: === SINGLE PDF MODE === Processing NIT Arunachal Pradesh  NIRF Overall 2025.pdf
+2025-11-14 20:54:25,871 INFO: === DEBUG: Wide DF Extracted ===
+2025-11-14 20:54:25,873 INFO:                                College Name  ... Seminars/Conferences/Workshops (2021-22)
+0  Nit Arunachal Pradesh  Nirf Overall 2025  ...                                         
+
+[1 rows x 25 columns]
+2025-11-14 20:54:25,943 INFO: Index(['College Name', 'Library (2023-24)',
+       'New Equipment for Laboratories (2023-24)',
+       'Engineering Workshops (2023-24)', 'Studios (2023-24)',
+       'Other expenditure on creation of Capital Assets (2023-24)',
+       'Library (2022-23)', 'New Equipment for Laboratories (2022-23)',
+       'Engineering Workshops (2022-23)', 'Studios (2022-23)',
+       'Other expenditure on creation of Capital Assets (2022-23)',
+       'Library (2021-22)', 'New Equipment for Laboratories (2021-22)',
+       'Engineering Workshops (2021-22)', 'Studios (2021-22)',
+       'Other expenditure on creation of Capital Assets (2021-22)',
+       'Salaries (2023-24)',
+       'Maintenance of Academic Infrastructure or consumables and other running expenditures (2023-24)',
+       'Seminars/Conferences/Workshops (2023-24)', 'Salaries (2022-23)',
+       'Maintenance of Academic Infrastructure or consumables and other running expenditures (2022-23)',
+       'Seminars/Conferences/Workshops (2022-23)', 'Salaries (2021-22)',
+       'Maintenance of Academic Infrastructure or consumables and other running expenditures (2021-22)',
+       'Seminars/Conferences/Workshops (2021-22)'],
+      dtype='object')
+2025-11-14 20:54:25,973 INFO: === DEBUG: Long DF Before Upsert ===
+2025-11-14 20:54:25,973 INFO: Empty DataFrame
+Columns: [institution_name, college_type, category, year, amount]
+Index: []
+2025-11-14 20:54:25,982 INFO: Rows: 0
+2025-11-14 20:54:29,492 INFO: DB upsert successful for NIT Arunachal Pradesh  NIRF Overall 2025.pdf
+2025-11-14 20:54:42,505 INFO: HTTP Request: POST https://wegavpoiduslmcpdcqtv.supabase.co/storage/v1/object/list/csvs "HTTP/2 200 OK"
+2025-11-14 20:54:44,347 INFO: HTTP Request: GET https://wegavpoiduslmcpdcqtv.supabase.co/storage/v1/object/csvs/NIRF_NIT'S_output.csv "HTTP/2 200 OK"
+2025-11-14 20:54:44,750 INFO: HTTP Request: POST https://wegavpoiduslmcpdcqtv.supabase.co/storage/v1/object/csvs/NIRF_NIT'S_output.csv "HTTP/2 400 Bad Request"
+2025-11-14 20:54:44,755 ERROR: ⚠ CSV update failed for NIT Arunachal Pradesh  NIRF Overall 2025.pdf: {'statusCode': 409, 'error': Duplicate, 'message': The resource already exists}
+Traceback (most recent call last):
+  File "C:\Users\Nitima\minor-3\venv\Lib\site-packages\storage3\_sync\file_api.py", line 78, in _request
+    response.raise_for_status()
+  File "C:\Users\Nitima\minor-3\venv\Lib\site-packages\httpx\_models.py", line 829, in raise_for_status
+    raise HTTPStatusError(message, request=request, response=self)
+httpx.HTTPStatusError: Client error '400 Bad Request' for url 'https://wegavpoiduslmcpdcqtv.supabase.co/storage/v1/object/csvs/NIRF_NIT'S_output.csv'
+For more information check: https://developer.mozilla.org/en-US/docs/Web/HTTP/Status/400
+
+The above exception was the direct cause of the following exception:
+
+Traceback (most recent call last):
+  File "C:\Users\Nitima\minor-3\backend\scripts\process_batch.py", line 136, in process_single_pdf
+    pdf_extractor.append_to_csv(
+  File "C:\Users\Nitima\minor-3\backend\app\services\pdf_extractor.py", line 900, in append_to_csv
+    csv_manager.append_row_to_csv(local_csv_path, row_data, csv_name)
+  File "C:\Users\Nitima\minor-3\backend\app\services\csv_manager.py", line 57, in append_row_to_csv
+    storage_utils.upload_file(CSV_BUCKET, local_csv_path, csv_name)
+  File "C:\Users\Nitima\minor-3\backend\app\services\storage_utils.py", line 32, in upload_file
+    result = sb.storage.from_(bucket).upload(
+             ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "C:\Users\Nitima\minor-3\venv\Lib\site-packages\storage3\_sync\file_api.py", line 566, in upload
+    return self._upload_or_update("POST", path_parts, file, file_options)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "C:\Users\Nitima\minor-3\venv\Lib\site-packages\storage3\_sync\file_api.py", line 538, in _upload_or_update
+    response = self._request(
+               ^^^^^^^^^^^^^^
+  File "C:\Users\Nitima\minor-3\venv\Lib\site-packages\storage3\_sync\file_api.py", line 81, in _request
+    raise StorageApiError(
+storage3.exceptions.StorageApiError: {'statusCode': 409, 'error': Duplicate, 'message': The resource already exists}
+2025-11-14 20:54:44,778 INFO: ✅ Single PDF processed successfully: NIT Arunachal Pradesh  NIRF Overall 2025.pdf
+2025-11-14 20:54:44,780 INFO: 🎉 SINGLE PDF processing complete

@@ -1,0 +1,29 @@
+# --- Web Framework ---
+fastapi
+uvicorn[standard]
+
+# --- Database & ORM ---
+sqlalchemy
+psycopg2-binary
+python-dotenv
+
+# --- Supabase Storage ---
+supabase
+
+# --- PDF Extraction Tools ---
+pdfplumber
+camelot-py[cv]
+tabula-py
+PyPDF2
+
+# --- Data Handling ---
+pandas
+numpy
+openpyxl
+
+# --- File Upload ---
+python-multipart
+
+# --- Utilities ---
+requests
+tqdm
